@@ -39,3 +39,9 @@ build/
 src/main/resources/application.properties
 src/main/resources/application-local.properties
 src/main/resources/application-*.properties
+
+### Node.js ###
+node_modules/
+package-lock.json
+npm-debug.log
+yarn-error.log
