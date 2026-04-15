@@ -7,10 +7,22 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node.js & Package Manager
 node_modules
+node_modules/
+package-lock.json
+.npm/
+.npmrc
+npx-cache/
+.yarn/
+.pnpm-store
+
+# Build outputs
 dist
 dist-ssr
 *.local
+
+# Environment
 .env
 .env.*
 !.env.example
