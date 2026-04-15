@@ -112,7 +112,7 @@ const RegistrationPage = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">Campus Email</label>
+            <label htmlFor="email">Student ID / Campus Email</label>
             <input
               type="email"
               id="email"
