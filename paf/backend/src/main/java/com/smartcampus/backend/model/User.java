@@ -28,6 +28,8 @@ public class User {
     @LastModifiedDate
     private Instant updatedAt;
 
+    private String phone;
+
     // Constructors
     public User() {}
 
@@ -96,5 +98,13 @@ public class User {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }
