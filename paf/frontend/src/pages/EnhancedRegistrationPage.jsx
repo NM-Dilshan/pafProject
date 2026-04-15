@@ -1,7 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { 
+  User, 
+  Mail, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  Loader2, 
+  ChevronLeft, 
+  GraduationCap, 
+  CreditCard, 
+  KeyRound,
+  CheckCircle2,
+  Sparkles,
+  Phone
+} from 'lucide-react';
 import { register, isValidCampusEmail } from '../services/authService';
-import './EnhancedRegistrationPage.css';
+import AuthLayout from '../components/auth/AuthLayout';
+import { cn } from '../lib/utils';
 
 const EnhancedRegistrationPage = () => {
   const [formData, setFormData] = useState({
@@ -9,179 +25,103 @@ const EnhancedRegistrationPage = () => {
     faculty: '',
     itNumber: '',
     campusEmail: '',
+    mobileNumber: '',
     password: '',
     confirmPassword: ''
   });
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const navigate = useNavigate();
 
   const faculties = [
-    { value: '', label: 'Select your faculty', icon: '🎓' },
-    { value: 'COMPUTING', label: 'Computing', icon: '💻' },
-    { value: 'ENGINEERING', label: 'Engineering', icon: '⚙️' },
-    { value: 'BUSINESS', label: 'SLIIT Business School', icon: '💼' },
-    { value: 'HUMANITIES', label: 'Humanities & Sciences', icon: '📚' },
-    { value: 'GRADUATE', label: 'Graduate Studies', icon: '🎓' },
-    { value: 'ARCHITECTURE', label: 'School of Architecture', icon: '🏛️' },
-    { value: 'LAW', label: 'School of Law', icon: '⚖️' },
-    { value: 'HOSPITALITY', label: 'School of Hospitality & Culinary', icon: '🍳' },
-    { value: 'FOUNDATION', label: 'Foundation Programme', icon: '📖' }
+    { value: 'COMPUTING', label: 'Computing', prefix: 'IT' },
+    { value: 'ENGINEERING', label: 'Engineering', prefix: 'EN' },
+    { value: 'BUSINESS', label: 'SLIIT Business School', prefix: 'BM' },
+    { value: 'HUMANITIES', label: 'Humanities & Sciences', prefix: 'HM' },
+    { value: 'GRADUATE', label: 'Graduate Studies', prefix: 'GS' },
+    { value: 'ARCHITECTURE', label: 'School of Architecture', prefix: 'AR' },
+    { value: 'LAW', label: 'School of Law', prefix: 'LW' },
+    { value: 'HOSPITALITY', label: 'School of Hospitality & Culinary', prefix: 'HS' },
+    { value: 'FOUNDATION', label: 'Foundation Programme', prefix: 'FD' }
   ];
 
-  // Auto-generate campus email when IT number changes
+  // Auto-suggest Student ID prefix based on faculty
   useEffect(() => {
-    if (formData.itNumber && formData.itNumber.length === 10) {
-      const email = `${formData.itNumber}@my.sliit.lk`;
+    if (formData.faculty) {
+      const selectedFaculty = faculties.find(f => f.value === formData.faculty);
+      if (selectedFaculty && (!formData.itNumber || formData.itNumber.length <= 2)) {
+        setFormData(prev => ({ ...prev, itNumber: selectedFaculty.prefix }));
+      }
+    }
+  }, [formData.faculty]);
+
+  // Auto-generate campus email when Student ID looks complete
+  useEffect(() => {
+    if (formData.itNumber && formData.itNumber.length >= 7) {
+      const email = `${formData.itNumber.toUpperCase()}@my.sliit.lk`;
       setFormData(prev => ({ ...prev, campusEmail: email }));
     }
   }, [formData.itNumber]);
 
-  const validateITNumber = (itNumber) => {
-    const pattern = /^[A-Za-z]{2}\d{8}$/;
-    return pattern.test(itNumber);
+  const validateField = (name, value) => {
+    switch (name) {
+      case 'fullName':
+        if (!value) return 'Full name is required';
+        return '';
+      case 'faculty':
+        if (!value) return 'Select a faculty';
+        return '';
+      case 'itNumber':
+        if (!value) return 'Student ID required';
+        return '';
+      case 'mobileNumber':
+        if (!value) return 'Mobile number required';
+        if (!/^\d{10}$/.test(value)) return 'Enter valid 10 digits';
+        return '';
+      case 'password':
+        if (value.length < 8) return 'Min 8 characters';
+        return '';
+      case 'confirmPassword':
+        if (value !== formData.password) return 'Passwords do not match';
+        return '';
+      default:
+        return '';
+    }
   };
 
-  const validateFullName = (name) => {
-    if (!name || name.trim().length === 0) return 'Full name is required';
-    if (name.trim().length < 2) return 'Name must be at least 2 characters';
-    if (name.trim().length > 100) return 'Name must not exceed 100 characters';
-    if (!/^[a-zA-Z\s]+$/.test(name)) return 'Name can only contain letters and spaces';
-    return '';
-  };
-
-  const validatePassword = (pwd) => {
-    if (!pwd || pwd.length === 0) return 'Password is required';
-    if (pwd.length < 8) return 'Password must be at least 8 characters';
-    if (!/[A-Z]/.test(pwd)) return 'Password must contain at least 1 uppercase letter';
-    if (!/[a-z]/.test(pwd)) return 'Password must contain at least 1 lowercase letter';
-    if (!/[0-9]/.test(pwd)) return 'Password must contain at least 1 number';
-    return '';
-  };
+  const strength = formData.password.length >= 8 ? 4 : 0; // Simplified for UI sync
+  const strengthColors = ['', 'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-green-500'];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error when user starts typing
-    if (fieldErrors[name]) {
-      setFieldErrors(prev => ({ ...prev, [name]: '' }));
-    }
-    
-    // Real-time validation for full name
-    if (name === 'fullName') {
-      const nameError = validateFullName(value);
-      if (nameError) {
-        setFieldErrors(prev => ({ ...prev, fullName: nameError }));
-      }
-    }
-    
-    // Real-time validation for faculty
-    if (name === 'faculty') {
-      if (!value) {
-        setFieldErrors(prev => ({ ...prev, faculty: 'Please select your faculty' }));
-      }
-    }
   };
 
-  const handleITNumberChange = (e) => {
-    const value = e.target.value.toUpperCase();
-    setFormData(prev => ({ ...prev, itNumber: value }));
-    
-    if (value && !validateITNumber(value)) {
-      setFieldErrors(prev => ({ 
-        ...prev, 
-        itNumber: 'Format: 2 letters + 8 digits (e.g., IT12345678)' 
-      }));
-    } else {
-      setFieldErrors(prev => ({ ...prev, itNumber: '' }));
-    }
-  };
-
-  const handlePasswordChange = (e) => {
-    const value = e.target.value;
-    setFormData(prev => ({ ...prev, password: value }));
-    
-    // Real-time password validation
-    const pwdError = validatePassword(value);
-    if (pwdError) {
-      setFieldErrors(prev => ({ ...prev, password: pwdError }));
-    } else {
-      setFieldErrors(prev => ({ ...prev, password: '' }));
-    }
-    
-    // Check if confirm password matches
-    if (formData.confirmPassword && value !== formData.confirmPassword) {
-      setFieldErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
-    } else if (formData.confirmPassword) {
-      setFieldErrors(prev => ({ ...prev, confirmPassword: '' }));
-    }
-  };
-
-  const handleConfirmPasswordChange = (e) => {
-    const value = e.target.value;
-    setFormData(prev => ({ ...prev, confirmPassword: value }));
-    
-    // Real-time confirm password validation
-    if (value !== formData.password) {
-      setFieldErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
-    } else {
-      setFieldErrors(prev => ({ ...prev, confirmPassword: '' }));
-    }
+  const handleBlur = (field) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setFieldErrors({});
-
-    const errors = {};
-
-    // Validate full name
-    const nameError = validateFullName(formData.fullName);
-    if (nameError) errors.fullName = nameError;
     
-    // Validate faculty
-    if (!formData.faculty) errors.faculty = 'Please select your faculty';
-    
-    // Validate IT number
-    if (!formData.itNumber) {
-      errors.itNumber = 'IT Number is required';
-    } else if (!validateITNumber(formData.itNumber)) {
-      errors.itNumber = 'Invalid format. Use 2 letters + 8 digits (e.g., IT12345678)';
-    }
-    
-    // Validate campus email
-    if (!isValidCampusEmail(formData.campusEmail)) {
-      errors.campusEmail = 'Invalid campus email format';
-    }
-    
-    // Validate password
-    const pwdError = validatePassword(formData.password);
-    if (pwdError) errors.password = pwdError;
-    
-    // Validate confirm password
-    if (!formData.confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      setError('Please fix all validation errors before submitting');
+    // Final validation
+    const errors = Object.keys(formData).map(key => validateField(key, formData[key])).filter(e => e);
+    if (errors.length > 0) {
+      setError('Please fix the errors in the form.');
+      setTouched(Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
       return;
     }
 
     setLoading(true);
 
     try {
-      await register(formData.fullName, formData.campusEmail, formData.password);
+      await register(formData.fullName, formData.campusEmail, formData.password, formData.mobileNumber);
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -191,222 +131,266 @@ const EnhancedRegistrationPage = () => {
   };
 
   return (
-    <div className="modern-registration-page">
-      <div className="background-shapes">
-        <div className="shape shape-1"></div>
-        <div className="shape shape-2"></div>
-        <div className="shape shape-3"></div>
-      </div>
-
-      <div className="modern-registration-card">
-        <div className="card-header">
-          <div className="logo-badge">
-            <span className="graduation-cap">🎓</span>
-          </div>
-          <h1 className="card-title">Create Account</h1>
-          <p className="card-subtitle">Smart Campus Hub</p>
-          <p className="card-description">Register with your SLIIT campus email</p>
+    <AuthLayout>
+      <div className="w-full max-w-2xl space-y-8 animate-in mt-2 fade-in slide-in-from-bottom-6 duration-1000">
+        <div>
+          <Link 
+            to="/login" 
+            className="inline-flex items-center text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-all mb-6 group"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
+            Back to login
+          </Link>
+          <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">Create Account</h2>
+          <p className="text-slate-500 font-medium tracking-wide">Join the Smart Campus community</p>
         </div>
 
         {error && (
-          <div className="alert alert-error">
-            <span className="alert-icon">⚠️</span>
-            <span>{error}</span>
+          <div className="p-4 rounded-2xl bg-red-50/50 backdrop-blur-sm border border-red-100/50 text-red-600 text-sm font-medium animate-in zoom-in-95 duration-300">
+            {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="registration-form">
-          <div className="form-grid">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
             {/* Full Name */}
-            <div className="form-field">
-              <label className="field-label">FULL NAME</label>
-              <div className="input-group">
-                <span className="input-prefix">👤</span>
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] ml-1">
+                Full Name
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
                 <input
                   type="text"
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
-                  placeholder="Your full name"
-                  className={
-                    fieldErrors.fullName 
-                      ? 'input-error' 
-                      : (formData.fullName && !validateFullName(formData.fullName) ? 'input-valid' : '')
-                  }
+                  onBlur={() => handleBlur('fullName')}
+                  className={cn(
+                    "block w-full pl-11 pr-4 py-3.5 bg-slate-50/50 border rounded-2xl text-sm transition-all duration-300 outline-none",
+                    touched.fullName && validateField('fullName', formData.fullName) 
+                      ? "border-red-300 bg-red-50/20" 
+                      : "border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5"
+                  )}
+                  placeholder="John Doe"
                   required
                 />
-                {formData.fullName && !fieldErrors.fullName && !validateFullName(formData.fullName) && (
-                  <span className="input-success-icon">✓</span>
-                )}
               </div>
-              {fieldErrors.fullName && (
-                <span className="field-error">{fieldErrors.fullName}</span>
-              )}
             </div>
 
             {/* Faculty */}
-            <div className="form-field">
-              <label className="field-label">FACULTY</label>
-              <div className="input-group">
-                <span className="input-prefix">🎓</span>
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] ml-1">
+                Faculty
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                  <GraduationCap className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
                 <select
                   name="faculty"
                   value={formData.faculty}
                   onChange={handleChange}
-                  className={fieldErrors.faculty ? 'input-error' : ''}
+                  onBlur={() => handleBlur('faculty')}
+                  className={cn(
+                    "block w-full pl-11 pr-10 py-3.5 bg-slate-50/50 border rounded-2xl text-sm transition-all duration-300 outline-none appearance-none cursor-pointer",
+                    touched.faculty && validateField('faculty', formData.faculty) 
+                      ? "border-red-300 bg-red-50/20" 
+                      : "border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5"
+                  )}
                   required
                 >
+                  <option value="">Select Faculty</option>
                   {faculties.map(f => (
-                    <option key={f.value} value={f.value}>
-                      {f.icon} {f.label}
-                    </option>
+                    <option key={f.value} value={f.value}>{f.label}</option>
                   ))}
                 </select>
-                <span className="select-arrow">▼</span>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                  <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
-              {fieldErrors.faculty && (
-                <span className="field-error">{fieldErrors.faculty}</span>
-              )}
             </div>
 
-            {/* IT Number */}
-            <div className="form-field">
-              <label className="field-label">IT NUMBER</label>
-              <div className="input-group">
-                <span className="input-prefix">🆔</span>
+            {/* Student ID Number */}
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] ml-1">
+                Student ID
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <CreditCard className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
                 <input
                   type="text"
                   name="itNumber"
                   value={formData.itNumber}
-                  onChange={handleITNumberChange}
-                  placeholder="AB12345678"
-                  maxLength="10"
-                  className={
-                    fieldErrors.itNumber 
-                      ? 'input-error' 
-                      : (formData.itNumber && validateITNumber(formData.itNumber) ? 'input-valid' : '')
-                  }
+                  onChange={handleChange}
+                  onBlur={() => handleBlur('itNumber')}
+                  className={cn(
+                    "block w-full pl-11 pr-4 py-3.5 bg-slate-50/50 border rounded-2xl text-sm transition-all duration-300 outline-none",
+                    touched.itNumber && validateField('itNumber', formData.itNumber) 
+                      ? "border-red-300 bg-red-50/20" 
+                      : "border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5"
+                  )}
+                  placeholder="IT23763180"
                   required
                 />
-                {formData.itNumber && !fieldErrors.itNumber && validateITNumber(formData.itNumber) && (
-                  <span className="input-success-icon">✓</span>
-                )}
               </div>
-              {fieldErrors.itNumber && (
-                <span className="field-error">{fieldErrors.itNumber}</span>
-              )}
-              {!fieldErrors.itNumber && formData.itNumber && formData.itNumber.length > 0 && (
-                <span className="field-hint">
-                  {formData.itNumber.length}/10 characters
-                </span>
-              )}
             </div>
 
-            {/* Campus Email */}
-            <div className="form-field">
-              <label className="field-label">CAMPUS EMAIL</label>
-              <div className="input-group">
-                <span className="input-prefix">📧</span>
+            {/* Mobile Number */}
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] ml-1">
+                Mobile Number
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Phone className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
+                <input
+                  type="tel"
+                  name="mobileNumber"
+                  value={formData.mobileNumber}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur('mobileNumber')}
+                  className={cn(
+                    "block w-full pl-11 pr-4 py-3.5 bg-slate-50/50 border rounded-2xl text-sm transition-all duration-300 outline-none",
+                    touched.mobileNumber && validateField('mobileNumber', formData.mobileNumber) 
+                      ? "border-red-300 bg-red-50/20" 
+                      : "border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5"
+                  )}
+                  placeholder="0712345678"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Hub Email (Auto) */}
+            <div className="space-y-2 md:col-span-2">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] ml-1 text-indigo-400/70">
+                Official Campus Email (Generated)
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-slate-300" />
+                </div>
                 <input
                   type="email"
                   name="campusEmail"
                   value={formData.campusEmail}
                   readOnly
-                  placeholder="12345678@my.sliit.lk"
-                  className="input-readonly"
+                  className="block w-full pl-12 pr-4 py-4 bg-slate-100/50 border border-slate-200/50 rounded-2xl text-base text-slate-400 outline-none cursor-not-allowed italic font-medium"
+                  placeholder="ID@my.sliit.lk"
                 />
               </div>
-              <span className="field-hint">Use your SLIIT email (AB********@my.sliit.lk)</span>
             </div>
 
             {/* Password */}
-            <div className="form-field">
-              <label className="field-label">PASSWORD</label>
-              <div className="input-group">
-                <span className="input-prefix">🔒</span>
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] ml-1">
+                Password
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
-                  onChange={handlePasswordChange}
-                  placeholder="8+ chars, uppercase, lowercase, number"
-                  className={fieldErrors.password ? 'input-error' : ''}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur('password')}
+                  className={cn(
+                    "block w-full pl-11 pr-10 py-3.5 bg-slate-50/50 border rounded-2xl text-sm transition-all duration-300 outline-none",
+                    touched.password && validateField('password', formData.password) 
+                      ? "border-red-300 bg-red-50/20" 
+                      : "border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5"
+                  )}
+                  placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
-                  className="password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-indigo-500 transition-colors"
                 >
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {fieldErrors.password && (
-                <span className="field-error">{fieldErrors.password}</span>
-              )}
-              {!fieldErrors.password && formData.password && (
-                <div className="password-requirements">
-                  <div className={formData.password.length >= 8 ? 'requirement-met' : 'requirement-unmet'}>
-                    {formData.password.length >= 8 ? '✓' : '○'} At least 8 characters
-                  </div>
-                  <div className={/[A-Z]/.test(formData.password) ? 'requirement-met' : 'requirement-unmet'}>
-                    {/[A-Z]/.test(formData.password) ? '✓' : '○'} One uppercase letter
-                  </div>
-                  <div className={/[a-z]/.test(formData.password) ? 'requirement-met' : 'requirement-unmet'}>
-                    {/[a-z]/.test(formData.password) ? '✓' : '○'} One lowercase letter
-                  </div>
-                  <div className={/[0-9]/.test(formData.password) ? 'requirement-met' : 'requirement-unmet'}>
-                    {/[0-9]/.test(formData.password) ? '✓' : '○'} One number
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Confirm Password */}
-            <div className="form-field">
-              <label className="field-label">CONFIRM PASSWORD</label>
-              <div className="input-group">
-                <span className="input-prefix">🔑</span>
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] ml-1">
+                Verify Password
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <KeyRound className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
                 <input
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={formData.confirmPassword}
-                  onChange={handleConfirmPasswordChange}
-                  placeholder="Re-enter your password"
-                  className={fieldErrors.confirmPassword ? 'input-error' : ''}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur('confirmPassword')}
+                  className={cn(
+                    "block w-full pl-11 pr-10 py-3.5 bg-slate-50/50 border rounded-2xl text-sm transition-all duration-300 outline-none",
+                    touched.confirmPassword && formData.confirmPassword !== formData.password 
+                      ? "border-red-300 bg-red-50/20" 
+                      : (formData.confirmPassword && formData.confirmPassword === formData.password 
+                        ? "border-green-400/50 focus:border-green-500" 
+                        : "border-slate-200 focus:border-indigo-500")
+                  )}
+                  placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
-                  className="password-toggle"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400"
                 >
-                  {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                  {formData.confirmPassword && formData.confirmPassword === formData.password ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
-              {fieldErrors.confirmPassword && (
-                <span className="field-error">{fieldErrors.confirmPassword}</span>
-              )}
             </div>
           </div>
 
-          <button type="submit" className="submit-button" disabled={loading}>
-            <span className="button-icon">🚀</span>
-            <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex items-center justify-center px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all duration-300 shadow-lg shadow-indigo-200 hover:shadow-indigo-300 mt-4 group overflow-hidden relative"
+          >
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-200 group-hover:animate-pulse" />
+                Create Campus Account
+              </span>
+            )}
+            <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-[shimmer_2s_infinite]" />
           </button>
-        </form>
 
-        <div className="card-footer">
-          <p className="footer-text">
-            Already have an account? <Link to="/login" className="footer-link">Sign in</Link>
-          </p>
-          <p className="terms-text">
-            By registering, you agree to the Smart Campus<br />
-            terms of use and privacy policy.
-          </p>
-        </div>
+          <div className="text-center pt-2">
+            <p className="text-sm font-medium text-slate-500">
+              Already a member?{' '}
+              <Link to="/login" className="font-bold text-indigo-600 hover:text-indigo-500 transition-colors underline-offset-4 hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </form>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 
