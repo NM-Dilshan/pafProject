@@ -68,11 +68,8 @@ public class OAuth2Service {
             String email = userInfo.get("email").asText();
             String name = userInfo.get("name").asText();
             
-            // Validate campus email
-            emailValidationService.validateCampusEmail(email);
-            
-            // Find or create user
-            User user = findOrCreateUser(email, name);
+            // Find or create user (validation included)
+            User user = findOrCreateUserFromOAuth(email, name);
             
             // Generate JWT token
             String jwtToken = tokenService.generateToken(user);
@@ -139,7 +136,10 @@ public class OAuth2Service {
         }
     }
     
-    private User findOrCreateUser(String email, String name) {
+    public User findOrCreateUserFromOAuth(String email, String name) {
+        // Validate campus email
+        emailValidationService.validateCampusEmail(email);
+        
         Optional<User> existingUser = userRepository.findByEmail(email);
         
         if (existingUser.isPresent()) {

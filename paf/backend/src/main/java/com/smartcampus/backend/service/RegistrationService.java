@@ -45,6 +45,7 @@ public class RegistrationService {
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordHash);
+        user.setPhone(request.getPhone());
         user.setRole(Role.USER);
         user.setCreatedAt(Instant.now());
         user.setUpdatedAt(Instant.now());

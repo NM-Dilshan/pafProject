@@ -65,14 +65,14 @@ export const removeUser = () => {
 /**
  * Register a new user
  */
-export const register = async (name, email, password) => {
+export const register = async (name, email, password, phone) => {
   try {
     const response = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, phone }),
     });
 
     const data = await response.json();
@@ -123,28 +123,9 @@ export const login = async (email, password) => {
 /**
  * Login with Google OAuth
  */
-export const googleLogin = async () => {
-  try {
-    // Fetch the Google authorization URL from backend
-    const response = await fetch(`${API_URL}/auth/google`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to get Google authorization URL');
-    }
-
-    const googleAuthUrl = await response.text();
-    
-    // Redirect to Google authorization page
-    window.location.href = googleAuthUrl;
-  } catch (error) {
-    console.error('Google login error:', error);
-    throw new Error('Failed to initiate Google login');
-  }
+export const googleLogin = () => {
+  // Directly redirect to the Spring Security OAuth2 initiation endpoint
+  window.location.href = 'http://localhost:8081/oauth2/authorization/google';
 };
 
 /**
