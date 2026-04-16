@@ -13,7 +13,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -152,8 +152,11 @@ public class OAuth2Service {
         newUser.setEmail(email);
         newUser.setPasswordHash(""); // No password for OAuth users
         newUser.setRole(Role.USER);
-        newUser.setCreatedAt(Instant.now());
-        newUser.setUpdatedAt(Instant.now());
+        newUser.setStaff(false);
+        newUser.setUsername(null);
+        newUser.setCreatedAt(LocalDateTime.now());
+        newUser.setUpdatedAt(LocalDateTime.now());
+        newUser.setActive(true);
         
         return userRepository.save(newUser);
     }
