@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import AuthenticatedRoute from './components/auth/AuthenticatedRoute';
@@ -30,6 +31,19 @@ function Unauthorized() {
       </div>
     </div>
   );
+
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
+import LoginPage from './pages/LoginPage'
+import RegistrationPage from './pages/RegistrationPage'
+import EnhancedRegistrationPage from './pages/EnhancedRegistrationPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
+import HomePage from './pages/HomePage'
+
+function Unauthorized() {
+  return <Navigate to="/login" replace />
+
 }
 
 function App() {
@@ -46,6 +60,7 @@ function App() {
           <Route path="/staff/login" element={<StaffLoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
+
 
           {/* Staff-only guard for forced password change */}
           <Route element={<StaffRoute />}>
@@ -77,10 +92,29 @@ function App() {
           </Route>
 
           <Route path="*" element={<Navigate to="/login" replace />} />
+
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>
-  );
+  )
 }
 
 export default App;
