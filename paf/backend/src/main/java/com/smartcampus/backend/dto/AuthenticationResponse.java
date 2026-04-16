@@ -2,7 +2,7 @@ package com.smartcampus.backend.dto;
 
 import com.smartcampus.backend.model.Role;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 public class AuthenticationResponse {
     
@@ -39,12 +39,12 @@ public class AuthenticationResponse {
         private String name;
         private String email;
         private Role role;
-        private Instant createdAt;
+        private LocalDateTime createdAt;
 
         // Constructors
         public UserDto() {}
 
-        public UserDto(String id, String name, String email, Role role, Instant createdAt) {
+        public UserDto(String id, String name, String email, Role role, LocalDateTime createdAt) {
             this.id = id;
             this.name = name;
             this.email = email;
@@ -85,11 +85,11 @@ public class AuthenticationResponse {
             this.role = role;
         }
 
-        public Instant getCreatedAt() {
+        public LocalDateTime getCreatedAt() {
             return createdAt;
         }
 
-        public void setCreatedAt(Instant createdAt) {
+        public void setCreatedAt(LocalDateTime createdAt) {
             this.createdAt = createdAt;
         }
     }
