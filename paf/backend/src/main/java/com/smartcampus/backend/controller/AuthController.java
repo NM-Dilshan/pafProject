@@ -1,10 +1,13 @@
 package com.smartcampus.backend.controller;
 
+import com.smartcampus.backend.dto.AuthResponse;
 import com.smartcampus.backend.dto.AuthenticationResponse;
 import com.smartcampus.backend.dto.LoginRequest;
 import com.smartcampus.backend.dto.RegisterRequest;
-import com.smartcampus.backend.service.LoginService;
+import com.smartcampus.backend.dto.StaffLoginRequest;
+import com.smartcampus.backend.service.AuthService;
 import com.smartcampus.backend.service.RegistrationService;
+import com.smartcampus.backend.service.LoginService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,11 +20,14 @@ public class AuthController {
     
     private final RegistrationService registrationService;
     private final LoginService loginService;
+    private final AuthService authService;
     
     public AuthController(RegistrationService registrationService, 
-                          LoginService loginService) {
+                          LoginService loginService,
+                          AuthService authService) {
         this.registrationService = registrationService;
         this.loginService = loginService;
+        this.authService = authService;
     }
     
     @PostMapping("/register")
@@ -33,6 +39,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthenticationResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthenticationResponse response = loginService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/staff/login")
+    public ResponseEntity<AuthResponse> staffLogin(@Valid @RequestBody StaffLoginRequest request) {
+        AuthResponse response = authService.staffLogin(request);
         return ResponseEntity.ok(response);
     }
 }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { isAuthenticated, getUser, logout, getProfile } from '../services/authService';
+import { isAuthenticated, getUser, logout, getProfile, setUser as persistUser } from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -12,18 +12,36 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const initializeAuth = async () => {
+      const storedUser = getUser();
+      if (storedUser) {
+        setCurrentUser(storedUser);
+      }
+
       if (isAuthenticated()) {
         try {
-          const userData = await getProfile();
-          setUser(userData);
+          const profileData = await getProfile();
+          const mergedUser = storedUser
+            ? {
+                ...storedUser,
+                ...profileData,
+                mustChangePassword: storedUser.mustChangePassword ?? false,
+                isStaff:
+                  storedUser.isStaff ??
+                  (storedUser.role === 'ADMIN' || storedUser.role === 'TECHNICIAN'),
+              }
+            : profileData;
+
+          persistUser(mergedUser);
+          setCurrentUser(mergedUser);
         } catch (error) {
           // Token is invalid or expired, clear it
           logout();
+          setCurrentUser(null);
         }
       }
       setLoading(false);
@@ -36,9 +54,13 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     isAuthenticated: isAuthenticated(),
+    setUser: (nextUser) => {
+      persistUser(nextUser);
+      setCurrentUser(nextUser);
+    },
     logout: () => {
       logout();
-      setUser(null);
+      setCurrentUser(null);
     },
   };
 
