@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -58,8 +58,8 @@ const buildingRowTemplate = (index = 0) => ({
 
 const emptyBuildingForm = () => ({
   buildingName: '',
-  blockCount: 1,
-  blocks: [buildingRowTemplate(0)],
+  blockCount: '',
+  blocks: [],
 });
 
 const emptyResourceForm = () => ({
@@ -255,6 +255,8 @@ const AdminResourcesPage = () => {
   const [editingBuildingId, setEditingBuildingId] = useState(null);
   const [editingResourceId, setEditingResourceId] = useState(null);
   const [resourceFilters, setResourceFilters] = useState({ search: '', resourceType: '', buildingId: '', status: '' });
+  const blockNameRefs = useRef([]);
+  const floorCountRefs = useRef([]);
 
   const selectedBuilding = useMemo(
     () => buildings.find((item) => item.id === resourceForm.buildingId) || null,
@@ -278,6 +280,14 @@ const AdminResourcesPage = () => {
 
   const showToast = (type, title, message) => {
     setToast({ type, title, message });
+  };
+
+  const focusBlockName = (index) => {
+    blockNameRefs.current[index]?.focus();
+  };
+
+  const focusFloorCount = (index) => {
+    floorCountRefs.current[index]?.focus();
   };
 
   useEffect(() => {
@@ -350,16 +360,23 @@ const AdminResourcesPage = () => {
   const validateBuildingForm = () => {
     const nextErrors = { blocks: [] };
     const buildingName = buildingForm.buildingName.trim();
+    const blockCount = buildingForm.blockCount === '' ? 0 : Number(buildingForm.blockCount);
 
     if (!buildingName) {
       nextErrors.buildingName = 'Building name is required';
     }
 
-    if (!Number.isInteger(Number(buildingForm.blockCount)) || Number(buildingForm.blockCount) < 1) {
-      nextErrors.blockCount = 'Block count must be greater than 0';
+    if (!Number.isInteger(blockCount) || blockCount < 0) {
+      nextErrors.blockCount = 'Block count must be 0 or more';
+    } else if (blockCount > 4) {
+      nextErrors.blockCount = 'Block count cannot exceed 4';
     }
 
-    if (buildingForm.blocks.length !== Number(buildingForm.blockCount)) {
+    if (blockCount === 0) {
+      if (buildingForm.blocks.length !== 0) {
+        nextErrors.blockCount = 'Remove all block rows when block count is 0';
+      }
+    } else if (buildingForm.blocks.length !== blockCount) {
       nextErrors.blockCount = 'Number of blocks must match block count';
     }
 
@@ -383,13 +400,16 @@ const AdminResourcesPage = () => {
 
       if (!Number.isInteger(floorCount) || floorCount < 1) {
         rowErrors.floorCount = 'Floor count must be greater than 0';
+      } else if (floorCount > 18) {
+        rowErrors.floorCount = 'Floor count cannot exceed 18';
       }
 
       nextErrors.blocks[index] = rowErrors;
     });
 
     setBuildingErrors(nextErrors);
-    return Object.keys(nextErrors).length === 1 && nextErrors.blocks.every((row) => Object.keys(row).length === 0);
+    const hasBlockRowErrors = nextErrors.blocks.some((row) => row && Object.keys(row).length > 0);
+    return Object.keys(nextErrors).filter((key) => key !== 'blocks').length === 0 && !hasBlockRowErrors;
   };
 
   const validateResourceForm = () => {
@@ -432,6 +452,8 @@ const AdminResourcesPage = () => {
       setEditingBuildingId(null);
       setBuildingForm(emptyBuildingForm());
     }
+    blockNameRefs.current = [];
+    floorCountRefs.current = [];
     setBuildingErrors({});
     setBuildingModalOpen(true);
   };
@@ -452,14 +474,12 @@ const AdminResourcesPage = () => {
       });
     } else {
       setEditingResourceId(null);
-      const firstBuilding = buildings[0];
-      const firstBlock = firstBuilding?.blocks?.[0];
       setResourceForm({
         ...emptyResourceForm(),
-        buildingId: firstBuilding?.id || '',
-        blockName: firstBlock?.blockName || '',
+        buildingId: '',
+        blockName: '',
         floorNumber: 1,
-        hallName: generateHallName(firstBlock?.blockName || '', 1, 1),
+        hallName: '',
       });
     }
     setResourceErrors({});
@@ -474,8 +494,17 @@ const AdminResourcesPage = () => {
   };
 
   const handleBuildingCountChange = (value) => {
-    const parsed = Math.max(1, Number(value) || 1);
+    if (value === '') {
+      setBuildingForm((prev) => ({ ...prev, blockCount: '', blocks: [] }));
+      return;
+    }
+
+    const parsed = Math.max(0, Math.min(4, Number(value) || 0));
     setBuildingForm((prev) => {
+      if (parsed === 0) {
+        return { ...prev, blockCount: 0, blocks: [] };
+      }
+
       const nextBlocks = prev.blocks.slice(0, parsed);
       while (nextBlocks.length < parsed) {
         nextBlocks.push(buildingRowTemplate(nextBlocks.length));
@@ -929,11 +958,25 @@ const AdminResourcesPage = () => {
               <span className="mb-1 block text-sm font-semibold text-slate-700">Block Count</span>
               <input
                 type="number"
-                min="1"
+                min="0"
+                max="4"
                 value={buildingForm.blockCount}
                 onChange={(event) => handleBuildingCountChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleBuildingCountChange(event.currentTarget.value);
+                    if (Number(event.currentTarget.value) > 0) {
+                      focusBlockName(0);
+                    }
+                  }
+                }}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                aria-describedby="block-count-helper"
               />
+              <p id="block-count-helper" className="mt-1 text-xs text-slate-500">
+                Enter 0 to clear all block rows. Max 4 blocks allowed.
+              </p>
               {buildingErrors.blockCount && <p className="mt-1 text-xs font-medium text-red-600">{buildingErrors.blockCount}</p>}
             </label>
 
@@ -949,6 +992,7 @@ const AdminResourcesPage = () => {
                     <label className="block">
                       <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Block Name</span>
                       <input
+                        ref={(element) => { blockNameRefs.current[index] = element; }}
                         value={block.blockName}
                         maxLength={1}
                         onChange={(event) => {
@@ -958,6 +1002,12 @@ const AdminResourcesPage = () => {
                             blocks[index] = { ...blocks[index], blockName: value };
                             return { ...prev, blocks };
                           });
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            focusFloorCount(index);
+                          }
                         }}
                         className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
                         placeholder="A"
@@ -970,8 +1020,10 @@ const AdminResourcesPage = () => {
                     <label className="block">
                       <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Floor Count</span>
                       <input
+                        ref={(element) => { floorCountRefs.current[index] = element; }}
                         type="number"
                         min="1"
+                        max="18"
                         value={block.floorCount}
                         onChange={(event) => {
                           const value = event.target.value;
@@ -980,6 +1032,16 @@ const AdminResourcesPage = () => {
                             blocks[index] = { ...blocks[index], floorCount: value };
                             return { ...prev, blocks };
                           });
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            if (index < buildingForm.blocks.length - 1) {
+                              focusBlockName(index + 1);
+                            } else {
+                              handleBuildingSubmit(event);
+                            }
+                          }
                         }}
                         className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
                         placeholder="3"
@@ -1031,7 +1093,18 @@ const AdminResourcesPage = () => {
               <span className="mb-1 block text-sm font-semibold text-slate-700">Building</span>
               <select
                 value={resourceForm.buildingId}
-                onChange={(event) => setResourceForm((prev) => ({ ...prev, buildingId: event.target.value, blockName: '', floorNumber: 1, hallName: '' }))}
+                onChange={(event) => {
+                  const buildingId = event.target.value;
+                  const selected = buildings.find((item) => item.id === buildingId);
+                  const firstBlock = selected?.blocks?.[0];
+                  setResourceForm((prev) => ({
+                    ...prev,
+                    buildingId,
+                    blockName: firstBlock?.blockName || '',
+                    floorNumber: 1,
+                    hallName: firstBlock?.blockName ? generateHallName(firstBlock.blockName, 1, prev.hallNumber) : '',
+                  }));
+                }}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
               >
                 <option value="">Select building</option>
@@ -1047,7 +1120,15 @@ const AdminResourcesPage = () => {
               <select
                 value={resourceForm.blockName}
                 disabled={!selectedBuilding}
-                onChange={(event) => setResourceForm((prev) => ({ ...prev, blockName: event.target.value, floorNumber: 1, hallName: generateHallName(event.target.value, 1, prev.hallNumber) }))}
+                onChange={(event) => {
+                  const blockName = event.target.value;
+                  setResourceForm((prev) => ({
+                    ...prev,
+                    blockName,
+                    floorNumber: 1,
+                    hallName: generateHallName(blockName, 1, prev.hallNumber),
+                  }));
+                }}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500 disabled:bg-slate-100"
               >
                 <option value="">Select block</option>
@@ -1063,12 +1144,23 @@ const AdminResourcesPage = () => {
               <select
                 value={resourceForm.floorNumber}
                 disabled={!selectedBlock}
-                onChange={(event) => setResourceForm((prev) => ({ ...prev, floorNumber: Number(event.target.value) }))}
+                onChange={(event) => {
+                  const floorNumber = Number(event.target.value);
+                  setResourceForm((prev) => ({
+                    ...prev,
+                    floorNumber,
+                    hallName: generateHallName(prev.blockName, floorNumber, prev.hallNumber),
+                  }));
+                }}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500 disabled:bg-slate-100"
               >
-                {Array.from({ length: selectedBlock?.floorCount || 1 }, (_, index) => index + 1).map((floor) => (
-                  <option key={floor} value={floor}>{floor}</option>
-                ))}
+                {!selectedBlock ? (
+                  <option value="">Select block first</option>
+                ) : (
+                  Array.from({ length: selectedBlock.floorCount }, (_, index) => index + 1).map((floor) => (
+                    <option key={floor} value={floor}>{floor}</option>
+                  ))
+                )}
               </select>
               {resourceErrors.floorNumber && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.floorNumber}</p>}
             </label>
