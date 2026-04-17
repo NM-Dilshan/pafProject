@@ -5,6 +5,7 @@ import {
   BookOpenCheck,
   CalendarCheck2,
   ClipboardList,
+  Building2,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -19,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 
 const sidebarItems = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard', active: true },
+  { label: 'Resources', icon: Building2, to: '/admin/resources' },
   { label: 'Manage Technicians', icon: Wrench, to: '/admin/technicians' },
   { label: 'Manage Bookings', icon: CalendarCheck2, to: '/admin/bookings' },
   { label: 'Manage Tickets', icon: Ticket, to: '/admin/tickets' },

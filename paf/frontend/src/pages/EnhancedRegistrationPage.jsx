@@ -15,9 +15,21 @@ import {
   Sparkles,
   Phone
 } from 'lucide-react';
-import { register, isValidCampusEmail } from '../services/authService';
+import { register } from '../services/authService';
 import AuthLayout from '../components/auth/AuthLayout';
 import { cn } from '../lib/utils';
+
+const FACULTIES = [
+  { value: 'COMPUTING', label: 'Computing', prefix: 'IT' },
+  { value: 'ENGINEERING', label: 'Engineering', prefix: 'EN' },
+  { value: 'BUSINESS', label: 'SLIIT Business School', prefix: 'BM' },
+  { value: 'HUMANITIES', label: 'Humanities & Sciences', prefix: 'HM' },
+  { value: 'GRADUATE', label: 'Graduate Studies', prefix: 'GS' },
+  { value: 'ARCHITECTURE', label: 'School of Architecture', prefix: 'AR' },
+  { value: 'LAW', label: 'School of Law', prefix: 'LW' },
+  { value: 'HOSPITALITY', label: 'School of Hospitality & Culinary', prefix: 'HS' },
+  { value: 'FOUNDATION', label: 'Foundation Programme', prefix: 'FD' }
+];
 
 const EnhancedRegistrationPage = () => {
   const [formData, setFormData] = useState({
@@ -38,27 +50,15 @@ const EnhancedRegistrationPage = () => {
 
   const navigate = useNavigate();
 
-  const faculties = [
-    { value: 'COMPUTING', label: 'Computing', prefix: 'IT' },
-    { value: 'ENGINEERING', label: 'Engineering', prefix: 'EN' },
-    { value: 'BUSINESS', label: 'SLIIT Business School', prefix: 'BM' },
-    { value: 'HUMANITIES', label: 'Humanities & Sciences', prefix: 'HM' },
-    { value: 'GRADUATE', label: 'Graduate Studies', prefix: 'GS' },
-    { value: 'ARCHITECTURE', label: 'School of Architecture', prefix: 'AR' },
-    { value: 'LAW', label: 'School of Law', prefix: 'LW' },
-    { value: 'HOSPITALITY', label: 'School of Hospitality & Culinary', prefix: 'HS' },
-    { value: 'FOUNDATION', label: 'Foundation Programme', prefix: 'FD' }
-  ];
-
   // Auto-suggest Student ID prefix based on faculty
   useEffect(() => {
     if (formData.faculty) {
-      const selectedFaculty = faculties.find(f => f.value === formData.faculty);
+      const selectedFaculty = FACULTIES.find(f => f.value === formData.faculty);
       if (selectedFaculty && (!formData.itNumber || formData.itNumber.length <= 2)) {
         setFormData(prev => ({ ...prev, itNumber: selectedFaculty.prefix }));
       }
     }
-  }, [formData.faculty]);
+  }, [formData.faculty, formData.itNumber]);
 
   // Auto-generate campus email when Student ID looks complete
   useEffect(() => {
@@ -93,9 +93,6 @@ const EnhancedRegistrationPage = () => {
         return '';
     }
   };
-
-  const strength = formData.password.length >= 8 ? 4 : 0; // Simplified for UI sync
-  const strengthColors = ['', 'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-green-500'];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -203,7 +200,7 @@ const EnhancedRegistrationPage = () => {
                   required
                 >
                   <option value="">Select Faculty</option>
-                  {faculties.map(f => (
+                  {FACULTIES.map(f => (
                     <option key={f.value} value={f.value}>{f.label}</option>
                   ))}
                 </select>
