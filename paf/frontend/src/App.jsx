@@ -19,7 +19,7 @@ import StaffLoginPage from './pages/StaffLoginPage';
 import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
 import UserDashboardPage from './pages/UserDashboardPage';
-import HomePage from './pages/HomePage';
+import HomePage from './pages/UserDashboardPage';
 import './App.css';
 
 function Unauthorized() {
@@ -44,7 +44,6 @@ function App() {
 
           <Route element={<UserRoute />}>
             <Route path="/dashboard" element={<UserDashboardPage />} />
-            <Route path="/home" element={<HomePage />} />
           </Route>
 
           <Route element={<AdminRoute />}>
