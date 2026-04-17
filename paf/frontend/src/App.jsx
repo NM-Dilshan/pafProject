@@ -9,6 +9,7 @@ import TechnicianManager from './components/admin/TechnicianManager';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import AdminBookingsPage from './pages/AdminBookingsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminResourcesPage from './pages/AdminResourcesPage';
 import AdminTicketsPage from './pages/AdminTicketsPage';
 import EnhancedRegistrationPage from './pages/EnhancedRegistrationPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
@@ -19,7 +20,6 @@ import StaffLoginPage from './pages/StaffLoginPage';
 import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
 import UserDashboardPage from './pages/UserDashboardPage';
-import HomePage from './pages/UserDashboardPage';
 import './App.css';
 
 function Unauthorized() {
@@ -48,9 +48,11 @@ function App() {
 
           <Route element={<AdminRoute />}>
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/admin/resources" element={<AdminResourcesPage />} />
             <Route path="/admin/technicians" element={<TechnicianManager />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
             <Route path="/admin/bookings" element={<AdminBookingsPage />} />
+            <Route path="/admin/reports" element={<Navigate to="/admin/dashboard" replace />} />
           </Route>
 
           <Route element={<TechnicianRoute />}>
