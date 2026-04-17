@@ -20,6 +20,7 @@ import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
 import UserDashboardPage from './pages/UserDashboardPage';
 import HomePage from './pages/UserDashboardPage';
+import { IncidentTicketingPage } from './pages/Incident_tickting/IncidentTicketingPage';
 import './App.css';
 
 function Unauthorized() {
@@ -60,6 +61,7 @@ function App() {
 
           <Route element={<AuthenticatedRoute />}>
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/incident-ticketing" element={<IncidentTicketingPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/login" replace />} />
