@@ -2,6 +2,7 @@ package com.smartcampus.backend.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -35,6 +36,18 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
+
+    @ExceptionHandler(DuplicateUsernameException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateUsername(DuplicateUsernameException ex) {
+        ErrorResponse error = new ErrorResponse(
+            HttpStatus.CONFLICT.value(),
+            "Conflict",
+            ex.getMessage(),
+            null,
+            Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
     
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
@@ -58,6 +71,30 @@ public class GlobalExceptionHandler {
             Instant.now()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ErrorResponse> handleCustomValidation(ValidationException ex) {
+        ErrorResponse error = new ErrorResponse(
+            HttpStatus.BAD_REQUEST.value(),
+            "Bad Request",
+            ex.getMessage(),
+            null,
+            Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        ErrorResponse error = new ErrorResponse(
+            HttpStatus.FORBIDDEN.value(),
+            "Forbidden",
+            ex.getMessage(),
+            null,
+            Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
     
     @ExceptionHandler(MethodArgumentNotValidException.class)

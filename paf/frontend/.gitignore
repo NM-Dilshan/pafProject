@@ -7,33 +7,42 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Node.js & Package Manager
 node_modules
-node_modules/
-package-lock.json
-.npm/
-.npmrc
-npx-cache/
-.yarn/
-.pnpm-store
-
-# Build outputs
 dist
 dist-ssr
 *.local
-
-# Environment
 .env
 .env.*
 !.env.example
 
-# Editor directories and files
+# Java / Spring Boot
+target/
+*.class
+*.jar
+*.war
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Coverage
+coverage/
+
+# Uploads
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+
+# Temp
+*.tmp
+*.swp

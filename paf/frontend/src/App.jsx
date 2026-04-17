@@ -1,55 +1,29 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import React from 'react'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import ProtectedRoute from './components/ProtectedRoute'
-import LoginPage from './pages/LoginPage'
-import RegistrationPage from './pages/RegistrationPage'
-import EnhancedRegistrationPage from './pages/EnhancedRegistrationPage'
-import AuthCallbackPage from './pages/AuthCallbackPage'
-import NotificationBell from './components/NotificationBell'
-import NotificationDropdown from './components/NotificationDropdown'
-import './App.css'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import AuthenticatedRoute from './components/auth/AuthenticatedRoute';
+import AdminRoute from './components/auth/AdminRoute';
+import StaffRoute from './components/auth/StaffRoute';
+import TechnicianRoute from './components/auth/TechnicianRoute';
+import UserRoute from './components/auth/UserRoute';
+import TechnicianManager from './components/admin/TechnicianManager';
+import AuthCallbackPage from './pages/AuthCallbackPage';
+import AdminBookingsPage from './pages/AdminBookingsPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminTicketsPage from './pages/AdminTicketsPage';
+import EnhancedRegistrationPage from './pages/EnhancedRegistrationPage';
+import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
+import LoginPage from './pages/LoginPage';
+import ProfilePage from './pages/ProfilePage';
+import RegistrationPage from './pages/RegistrationPage';
+import StaffLoginPage from './pages/StaffLoginPage';
+import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
+import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
+import UserDashboardPage from './pages/UserDashboardPage';
+import HomePage from './pages/UserDashboardPage';
+import './App.css';
 
-// Dashboard component (placeholder)
-function Dashboard() {
-  const { user, logout } = useAuth();
-  const [showNotifications, setShowNotifications] = React.useState(false);
-
-  return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>Smart Campus Hub</h1>
-        <div className="header-actions">
-          <div style={{ position: 'relative' }}>
-            <NotificationBell onBellClick={() => setShowNotifications(!showNotifications)} />
-            <NotificationDropdown 
-              isOpen={showNotifications} 
-              onClose={() => setShowNotifications(false)} 
-            />
-          </div>
-          <div className="user-info">
-            <span>{user?.name}</span>
-            <button onClick={logout}>Logout</button>
-          </div>
-        </div>
-      </header>
-      <main className="dashboard-content">
-        <h2>Welcome to the Dashboard</h2>
-        <p>Your notification bell is in the header.</p>
-      </main>
-    </div>
-  );
-}
-
-// Unauthorized page
 function Unauthorized() {
-  return (
-    <div className="unauthorized-page">
-      <h2>Access Denied</h2>
-      <p>You don't have permission to access this page.</p>
-      <Navigate to="/dashboard" replace />
-    </div>
-  );
+  return <Navigate to="/login" replace />;
 }
 
 function App() {
@@ -60,21 +34,40 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<EnhancedRegistrationPage />} />
           <Route path="/register-simple" element={<RegistrationPage />} />
+          <Route path="/staff/login" element={<StaffLoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+
+          <Route element={<StaffRoute />}>
+            <Route path="/staff/change-password" element={<ForceChangePasswordPage />} />
+          </Route>
+
+          <Route element={<UserRoute />}>
+            <Route path="/dashboard" element={<UserDashboardPage />} />
+          </Route>
+
+          <Route element={<AdminRoute />}>
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/admin/technicians" element={<TechnicianManager />} />
+            <Route path="/admin/tickets" element={<AdminTicketsPage />} />
+            <Route path="/admin/bookings" element={<AdminBookingsPage />} />
+          </Route>
+
+          <Route element={<TechnicianRoute />}>
+            <Route path="/technician/dashboard" element={<TechnicianDashboardPage />} />
+            <Route path="/technician/tickets" element={<TechnicianTicketsPage />} />
+          </Route>
+
+          <Route element={<AuthenticatedRoute />}>
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+
           <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
 }
 
-export default App
+export default App;

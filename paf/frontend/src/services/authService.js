@@ -1,5 +1,6 @@
-// API Base URL
-const API_URL = 'http://localhost:8081/api';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8081/api';
 
 // Campus email pattern: 2 letters (case-insensitive) + 8 digits + @my.sliit.lk
 // Examples: IT12345678@my.sliit.lk, it12345678@my.sliit.lk, CS87654321@my.sliit.lk
@@ -8,6 +9,8 @@ const CAMPUS_EMAIL_PATTERN = /^[A-Za-z]{2}\d{8}@my\.sliit\.lk$/;
 // Token storage key
 const TOKEN_KEY = 'smartcampus_token';
 const USER_KEY = 'smartcampus_user';
+const LEGACY_TOKEN_KEY = 'token';
+const LEGACY_USER_KEY = 'user';
 
 /**
  * Validate campus email format
@@ -24,13 +27,14 @@ export const isValidCampusEmail = (email) => {
  */
 export const setToken = (token) => {
   localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(LEGACY_TOKEN_KEY, token);
 };
 
 /**
  * Get stored authentication token
  */
 export const getToken = () => {
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY);
 };
 
 /**
@@ -38,6 +42,7 @@ export const getToken = () => {
  */
 export const removeToken = () => {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
 };
 
 /**
@@ -45,13 +50,14 @@ export const removeToken = () => {
  */
 export const setUser = (user) => {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(user));
 };
 
 /**
  * Get stored user data
  */
 export const getUser = () => {
-  const userStr = localStorage.getItem(USER_KEY);
+  const userStr = localStorage.getItem(USER_KEY) || localStorage.getItem(LEGACY_USER_KEY);
   return userStr ? JSON.parse(userStr) : null;
 };
 
@@ -60,6 +66,7 @@ export const getUser = () => {
  */
 export const removeUser = () => {
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(LEGACY_USER_KEY);
 };
 
 /**
@@ -67,19 +74,14 @@ export const removeUser = () => {
  */
 export const register = async (name, email, password, phone) => {
   try {
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, email, password, phone }),
+    const response = await axios.post(`${API_BASE}/auth/register`, {
+      name,
+      email,
+      password,
+      phone,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Registration failed');
-    }
+    const data = response.data;
 
     // Store token and user data
     setToken(data.token);
@@ -87,7 +89,7 @@ export const register = async (name, email, password, phone) => {
 
     return data;
   } catch (error) {
-    throw new Error(error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Registration failed');
   }
 };
 
@@ -96,19 +98,12 @@ export const register = async (name, email, password, phone) => {
  */
 export const login = async (email, password) => {
   try {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
+    const response = await axios.post(`${API_BASE}/auth/login`, {
+      email,
+      password,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Login failed');
-    }
+    const data = response.data;
 
     // Store token and user data
     setToken(data.token);
@@ -116,7 +111,7 @@ export const login = async (email, password) => {
 
     return data;
   } catch (error) {
-    throw new Error(error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Login failed');
   }
 };
 
@@ -125,7 +120,8 @@ export const login = async (email, password) => {
  */
 export const googleLogin = () => {
   // Directly redirect to the Spring Security OAuth2 initiation endpoint
-  window.location.href = 'http://localhost:8081/oauth2/authorization/google';
+  const oauthBase = API_BASE.replace('/api', '');
+  window.location.href = `${oauthBase}/oauth2/authorization/google`;
 };
 
 /**
@@ -139,31 +135,41 @@ export const getProfile = async () => {
   }
 
   try {
-    const response = await fetch(`${API_URL}/user/me`, {
-      method: 'GET',
+    const response = await axios.get(`${API_BASE}/user/me`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        logout();
-        throw new Error('Session expired. Please login again.');
-      }
-      throw new Error(data.message || 'Failed to fetch profile');
-    }
+    const data = response.data;
 
     // Update stored user data
     setUser(data);
 
     return data;
   } catch (error) {
-    throw new Error(error.message);
+    if (error.response?.status === 401) {
+      logout();
+      throw new Error('Session expired. Please login again.');
+    }
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch profile');
   }
+};
+
+// Staff login (NEW)
+export const staffLogin = async (username, password) => {
+  const response = await axios.post(`${API_BASE}/auth/staff/login`, { username, password });
+  return response.data;
+};
+
+// Change password (all roles)
+export const changePassword = async (currentPassword, newPassword, confirmNewPassword) => {
+  const response = await axios.post(
+    `${API_BASE}/user/change-password`,
+    { currentPassword, newPassword, confirmNewPassword },
+    { headers: { Authorization: `Bearer ${getToken()}` } }
+  );
+  return response.data;
 };
 
 /**

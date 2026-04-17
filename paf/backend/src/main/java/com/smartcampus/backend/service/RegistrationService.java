@@ -8,7 +8,7 @@ import com.smartcampus.backend.model.User;
 import com.smartcampus.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Service
 public class RegistrationService {
@@ -47,8 +47,11 @@ public class RegistrationService {
         user.setPasswordHash(passwordHash);
         user.setPhone(request.getPhone());
         user.setRole(Role.USER);
-        user.setCreatedAt(Instant.now());
-        user.setUpdatedAt(Instant.now());
+        user.setStaff(false);
+        user.setUsername(null);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        user.setActive(true);
         
         // Save user
         User savedUser = userRepository.save(user);

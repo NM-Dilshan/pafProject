@@ -1,7 +1,9 @@
 package com.smartcampus.backend.service;
 
+import com.smartcampus.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -12,7 +14,7 @@ class PasswordServiceTest {
 
     @BeforeEach
     void setUp() {
-        passwordService = new PasswordService();
+        passwordService = new PasswordService(Mockito.mock(UserRepository.class));
         testPassword = "SecurePassword123!";
     }
 
