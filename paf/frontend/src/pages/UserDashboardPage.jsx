@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   Bell,
@@ -16,7 +17,7 @@ import {
 
 const navigationItems = [
   { label: 'Dashboard', icon: Home, href: '#dashboard' },
-  { label: 'Resources', icon: BookOpen, href: '#resources' },
+  { label: 'Study Areas', icon: BookOpen, href: '/study-areas' },
   { label: 'Bookings', icon: CalendarCheck2, href: '#bookings' },
   { label: 'My Bookings', icon: ClipboardList, href: '#my-bookings' },
   { label: 'Tickets', icon: MessageSquareWarning, href: '#tickets' },
@@ -61,6 +62,20 @@ function StatusBadge({ status }) {
 }
 
 function Sidebar() {
+  const location = useLocation()
+
+  const isActive = (href) => {
+    if (href.startsWith('/')) {
+      return location.pathname === href
+    }
+
+    if (href.startsWith('#')) {
+      return location.pathname === '/dashboard' && (location.hash === href || (href === '#dashboard' && !location.hash))
+    }
+
+    return false
+  }
+
   return (
     <aside className="hidden xl:flex xl:w-72 xl:flex-col xl:border-r xl:border-slate-200 xl:bg-white/90 xl:backdrop-blur-md">
       <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-6">
@@ -76,11 +91,12 @@ function Sidebar() {
       <nav className="flex-1 space-y-1 px-4 py-6">
         {navigationItems.map((item) => {
           const Icon = item.icon
+          const active = isActive(item.href)
           return (
             <a
               key={item.label}
               href={item.href}
-              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-emerald-700"
+              className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${active ? 'bg-emerald-100 text-emerald-800' : 'text-slate-600 hover:bg-slate-100 hover:text-emerald-700'}`}
             >
               <Icon className="h-5 w-5" />
               {item.label}
@@ -187,9 +203,44 @@ function QuickActionButton({ title, description, icon, accent = 'bg-green-600' }
 
 export default function HomePage() {
   const { user, logout } = useAuth()
+  const [showLocationPopup, setShowLocationPopup] = useState(() =>
+    typeof navigator !== 'undefined' && Boolean(navigator.geolocation),
+  )
+
+  const enableLocation = () => {
+    localStorage.setItem('studyAreaLocationPreference', 'enabled')
+    setShowLocationPopup(false)
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
+      {showLocationPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">Location Access</p>
+            <h2 className="mt-2 text-xl font-extrabold text-emerald-900">Turn on location?</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Enable location services to improve study area availability and live occupancy updates.
+            </p>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowLocationPopup(false)}
+                className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Not now
+              </button>
+              <button
+                onClick={enableLocation}
+                className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+              >
+                Enable Location
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex min-h-screen">
         <Sidebar />
 

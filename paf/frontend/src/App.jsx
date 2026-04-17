@@ -17,6 +17,7 @@ import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import RegistrationPage from './pages/RegistrationPage';
 import StaffLoginPage from './pages/StaffLoginPage';
+import StudyAreasPage from './facilities/pages/StudyAreasPage';
 import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
 import UserDashboardPage from './pages/UserDashboardPage';
@@ -44,6 +45,7 @@ function App() {
 
           <Route element={<UserRoute />}>
             <Route path="/dashboard" element={<UserDashboardPage />} />
+            <Route path="/study-areas" element={<StudyAreasPage />} />
           </Route>
 
           <Route element={<AdminRoute />}>

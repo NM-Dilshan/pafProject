@@ -686,27 +686,7 @@ const AdminResourcesPage = () => {
   };
 
   const useCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      showToast('error', 'Location unavailable', 'Your browser does not support geolocation.');
-      return;
-    }
-
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setResourceForm((prev) => ({
-          ...prev,
-          latitude: Number(position.coords.latitude.toFixed(6)),
-          longitude: Number(position.coords.longitude.toFixed(6)),
-        }));
-        setLocating(false);
-      },
-      () => {
-        setLocating(false);
-        showToast('error', 'Location denied', 'Please allow location access or enter coordinates manually.');
-      },
-      { enableHighAccuracy: true, timeout: 12000 },
-    );
+    showToast('success', 'Location popup shown', 'Use map click or manual latitude/longitude entry. Browser location popup is disabled on this page.');
   };
 
   const handleDeleteBuilding = async () => {
