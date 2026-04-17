@@ -79,7 +79,8 @@ public class UserController {
 
     @PostMapping("/location/check-in")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<LocationCheckInResponse> checkInLocation(@Valid @RequestBody UserLocationCheckInRequest request) {
+    public ResponseEntity<LocationCheckInResponse> checkInLocation(
+            @Valid @RequestBody UserLocationCheckInRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.getUserByPrincipal(authentication.getName());
 
@@ -99,7 +100,8 @@ public class UserController {
     @GetMapping("/study-areas/occupancy")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<StudyAreaOccupancyResponse>> getStudyAreaOccupancy() {
-        List<ResourceResponse> studyAreas = resourceManagementService.getResources("STUDY_AREA", null, "AVAILABLE", null);
+        List<ResourceResponse> studyAreas = resourceManagementService.getResources("STUDY_AREA", null, "AVAILABLE",
+                null);
 
         List<StudyAreaOccupancyResponse> occupancy = studyAreas.stream()
                 .map(area -> new StudyAreaOccupancyResponse(
@@ -117,7 +119,8 @@ public class UserController {
     @GetMapping("/study-areas/active-members")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<StudyAreaActiveMembersResponse>> getStudyAreaActiveMembers() {
-        List<ResourceResponse> studyAreas = resourceManagementService.getResources("STUDY_AREA", null, "AVAILABLE", null);
+        List<ResourceResponse> studyAreas = resourceManagementService.getResources("STUDY_AREA", null, "AVAILABLE",
+                null);
 
         List<StudyAreaActiveMembersResponse> response = studyAreas.stream()
                 .map(area -> {
