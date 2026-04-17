@@ -4,6 +4,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { login, googleLogin, isValidCampusEmail } from '../services/authService';
 import AuthLayout from '../components/auth/AuthLayout';
 import { cn } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
   const [searchParams] = useSearchParams();
@@ -16,6 +17,7 @@ const LoginPage = () => {
   const [touched, setTouched] = useState({ email: false, password: false });
 
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   useEffect(() => {
     // Check for OAuth error in URL
@@ -58,8 +60,16 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const response = await login(email, password);
+      setUser(response.user);
+
+      if (response.user?.role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else if (response.user?.role === 'TECHNICIAN') {
+        navigate('/technician/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.message || 'Invalid email or password. Please try again.');
     } finally {

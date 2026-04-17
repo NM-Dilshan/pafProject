@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { setToken, setUser } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 
 const AuthCallbackPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { setUser: setAuthUser } = useAuth();
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -24,9 +26,16 @@ const AuthCallbackPage = () => {
         setToken(token);
         const user = JSON.parse(decodeURIComponent(userStr));
         setUser(user);
+        setAuthUser(user);
 
         // Redirect to dashboard
-        navigate('/dashboard');
+        if (user?.role === 'ADMIN') {
+          navigate('/admin/dashboard');
+        } else if (user?.role === 'TECHNICIAN') {
+          navigate('/technician/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       } catch (err) {
         console.error('Failed to parse user data:', err);
         navigate('/login?error=Authentication failed');
