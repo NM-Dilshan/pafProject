@@ -20,7 +20,9 @@ target/
 *.ipr
 .env
 .env.*
+env.local
 !.env.example
+.env.local
 
 ### NetBeans ###
 /nbproject/private/
@@ -43,6 +45,7 @@ src/main/resources/application-*.properties
 ### Node.js ###
 node_modules/
 package-lock.json
+<<<<<<< HEAD
 npm-debug.log*
 nyarn-error.log*
 pnpm-debug.log*
@@ -52,3 +55,8 @@ lerna-debug.log*
 npx-cache/
 .yarn/
 dist/
+=======
+*.log
+npm-debug.log
+yarn-error.log
+>>>>>>> 3daa9dd2bd123dd3a28f33f67c46172aa336ab94
