@@ -38,6 +38,12 @@ public class ResourceRequest {
 
     private String description;
 
+    private Double latitude;
+
+    private Double longitude;
+
+    private Integer mapRadiusMeters;
+
     public ResourceRequest() {
     }
 
@@ -103,5 +109,29 @@ public class ResourceRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
+
+    public Integer getMapRadiusMeters() {
+        return mapRadiusMeters;
+    }
+
+    public void setMapRadiusMeters(Integer mapRadiusMeters) {
+        this.mapRadiusMeters = mapRadiusMeters;
     }
 }

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Circle, CircleMarker, MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import {
   Bell,
   Building2,
@@ -8,6 +9,7 @@ import {
   Eye,
   LayoutDashboard,
   LogOut,
+  MapPin,
   Menu,
   Plus,
   Search,
@@ -19,6 +21,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import 'leaflet/dist/leaflet.css';
 import {
   createBuilding,
   createResource,
@@ -72,6 +75,9 @@ const emptyResourceForm = () => ({
   capacity: 1,
   status: 'AVAILABLE',
   description: '',
+  latitude: '',
+  longitude: '',
+  mapRadiusMeters: 50,
 });
 
 const statusStyles = {
@@ -232,14 +238,62 @@ function ConfirmDialog({ title, message, onConfirm, onCancel }) {
   );
 }
 
+function MapClickHandler({ onPick }) {
+  useMapEvents({
+    click(event) {
+      onPick(event.latlng.lat, event.latlng.lng);
+    },
+  });
+  return null;
+}
+
+function MapViewController({ center }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center, map.getZoom(), { animate: true });
+  }, [center, map]);
+
+  return null;
+}
+
+function StudyAreaLocationPicker({ latitude, longitude, radius, onPick }) {
+  const hasPoint = latitude !== '' && longitude !== '' && Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude));
+  const center = hasPoint ? [Number(latitude), Number(longitude)] : [6.9068, 79.8703];
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-slate-500">Click on the map to set the study area center point.</p>
+      <div className="h-64 overflow-hidden rounded-xl border border-slate-200">
+        <MapContainer center={center} zoom={16} className="h-full w-full">
+          <MapViewController center={center} />
+          <MapClickHandler onPick={onPick} />
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {hasPoint && (
+            <>
+              <CircleMarker center={center} radius={7} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 0.9 }} />
+              <Circle center={center} radius={Number(radius) || 50} pathOptions={{ color: '#16a34a', fillColor: '#86efac', fillOpacity: 0.22 }} />
+            </>
+          )}
+        </MapContainer>
+      </div>
+    </div>
+  );
+}
+
 const AdminResourcesPage = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const [activeTab, setActiveTab] = useState('buildings');
   const [buildings, setBuildings] = useState([]);
   const [resources, setResources] = useState([]);
+  const [studyAreaResources, setStudyAreaResources] = useState([]);
   const [loadingBuildings, setLoadingBuildings] = useState(false);
   const [loadingResources, setLoadingResources] = useState(false);
+  const [loadingStudyAreas, setLoadingStudyAreas] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const [buildingModalOpen, setBuildingModalOpen] = useState(false);
@@ -255,6 +309,7 @@ const AdminResourcesPage = () => {
   const [editingBuildingId, setEditingBuildingId] = useState(null);
   const [editingResourceId, setEditingResourceId] = useState(null);
   const [resourceFilters, setResourceFilters] = useState({ search: '', resourceType: '', buildingId: '', status: '' });
+  const [locating, setLocating] = useState(false);
   const blockNameRefs = useRef([]);
   const floorCountRefs = useRef([]);
 
@@ -277,6 +332,11 @@ const AdminResourcesPage = () => {
     const maintenanceCount = resources.filter((item) => item.status === 'UNDER_MAINTENANCE').length;
     return { buildingCount, resourceCount, availableCount, maintenanceCount };
   }, [buildings.length, resources]);
+
+  const mappedStudyAreas = useMemo(
+    () => studyAreaResources.filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))),
+    [studyAreaResources],
+  );
 
   const showToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -323,10 +383,23 @@ const AdminResourcesPage = () => {
     }
   }, []);
 
+  const loadStudyAreas = useCallback(async () => {
+    try {
+      setLoadingStudyAreas(true);
+      const data = await getResources({ resourceType: 'STUDY_AREA' });
+      setStudyAreaResources(Array.isArray(data) ? data : []);
+    } catch (fetchError) {
+      setError(fetchError.response?.data?.message || 'Failed to load study areas');
+    } finally {
+      setLoadingStudyAreas(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadBuildings();
     loadResources();
-  }, [loadBuildings, loadResources]);
+    loadStudyAreas();
+  }, [loadBuildings, loadResources, loadStudyAreas]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -428,6 +501,22 @@ const AdminResourcesPage = () => {
       nextErrors.capacity = 'Capacity must be greater than 0';
     }
 
+    if (resourceForm.resourceType === 'STUDY_AREA') {
+      const lat = Number(resourceForm.latitude);
+      const lng = Number(resourceForm.longitude);
+      const radius = Number(resourceForm.mapRadiusMeters);
+
+      if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+        nextErrors.latitude = 'Latitude must be between -90 and 90';
+      }
+      if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+        nextErrors.longitude = 'Longitude must be between -180 and 180';
+      }
+      if (!Number.isInteger(radius) || radius < 1) {
+        nextErrors.mapRadiusMeters = 'Radius must be greater than 0';
+      }
+    }
+
     if (selectedBlock && Number(resourceForm.floorNumber) > Number(selectedBlock.floorCount)) {
       nextErrors.floorNumber = 'Floor number cannot exceed the selected block floor count';
     }
@@ -471,6 +560,9 @@ const AdminResourcesPage = () => {
         capacity: resource.capacity || 1,
         status: resource.status || 'AVAILABLE',
         description: resource.description || '',
+        latitude: resource.latitude ?? '',
+        longitude: resource.longitude ?? '',
+        mapRadiusMeters: resource.mapRadiusMeters ?? 50,
       });
     } else {
       setEditingResourceId(null);
@@ -482,6 +574,7 @@ const AdminResourcesPage = () => {
         hallName: '',
       });
     }
+    setLocating(false);
     setResourceErrors({});
     setResourceModalOpen(true);
   };
@@ -565,6 +658,9 @@ const AdminResourcesPage = () => {
         capacity: Number(resourceForm.capacity),
         status: resourceForm.status,
         description: resourceForm.description,
+        latitude: resourceForm.resourceType === 'STUDY_AREA' ? Number(resourceForm.latitude) : null,
+        longitude: resourceForm.resourceType === 'STUDY_AREA' ? Number(resourceForm.longitude) : null,
+        mapRadiusMeters: resourceForm.resourceType === 'STUDY_AREA' ? Number(resourceForm.mapRadiusMeters) : null,
       };
 
       if (editingResourceId) {
@@ -579,6 +675,7 @@ const AdminResourcesPage = () => {
       setEditingResourceId(null);
       setResourceForm(emptyResourceForm());
       await loadResources(resourceFilters);
+      await loadStudyAreas();
     } catch (submitError) {
       const message = submitError.response?.data?.message || 'Failed to save resource';
       showToast('error', 'Resource save failed', message);
@@ -586,6 +683,30 @@ const AdminResourcesPage = () => {
     } finally {
       setResourceSaving(false);
     }
+  };
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      showToast('error', 'Location unavailable', 'Your browser does not support geolocation.');
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setResourceForm((prev) => ({
+          ...prev,
+          latitude: Number(position.coords.latitude.toFixed(6)),
+          longitude: Number(position.coords.longitude.toFixed(6)),
+        }));
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+        showToast('error', 'Location denied', 'Please allow location access or enter coordinates manually.');
+      },
+      { enableHighAccuracy: true, timeout: 12000 },
+    );
   };
 
   const handleDeleteBuilding = async () => {
@@ -611,6 +732,7 @@ const AdminResourcesPage = () => {
       await deleteResource(confirmDelete.id);
       showToast('success', 'Resource deleted', 'The resource was removed successfully.');
       await loadResources(resourceFilters);
+      await loadStudyAreas();
     } catch (deleteError) {
       const message = deleteError.response?.data?.message || 'Unable to delete resource';
       showToast('error', 'Delete failed', message);
@@ -686,6 +808,13 @@ const AdminResourcesPage = () => {
                   className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${activeTab === 'resources' ? 'bg-green-600 text-white shadow-sm' : 'text-slate-600 hover:bg-green-50'}`}
                 >
                   Resources
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('study-areas')}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${activeTab === 'study-areas' ? 'bg-green-600 text-white shadow-sm' : 'text-slate-600 hover:bg-green-50'}`}
+                >
+                  Study Areas
                 </button>
               </div>
 
@@ -769,7 +898,7 @@ const AdminResourcesPage = () => {
                       </div>
                     )}
                   </div>
-                ) : (
+                ) : activeTab === 'resources' ? (
                   <div className="space-y-6">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                       <div>
@@ -917,6 +1046,85 @@ const AdminResourcesPage = () => {
                           </tbody>
                         </table>
                       </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-900">Study Area Map</h2>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab('resources');
+                          openResourceModal();
+                          setResourceForm((prev) => ({ ...prev, resourceType: 'STUDY_AREA' }));
+                        }}
+                        disabled={buildings.length === 0}
+                        className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Study Area
+                      </button>
+                    </div>
+
+                    {loadingStudyAreas ? (
+                      <div className="py-20 text-center text-slate-500">Loading study areas...</div>
+                    ) : mappedStudyAreas.length === 0 ? (
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-10 text-center text-slate-500">
+                        Study area locations not available yet. Add `STUDY_AREA` resources with latitude/longitude.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                          {mappedStudyAreas.map((area) => {
+                            const center = [Number(area.latitude), Number(area.longitude)];
+                            const radius = Number(area.mapRadiusMeters) || 50;
+
+                            return (
+                              <article key={area.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-start justify-between gap-3">
+                                  <h3 className="inline-flex items-center gap-2 text-base font-bold text-slate-900">
+                                    <MapPin className="h-4 w-4 text-green-700" />
+                                    {area.hallName}
+                                  </h3>
+                                  <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+                                    {radius} m
+                                  </span>
+                                </div>
+
+                                <p className="mt-2 text-sm text-slate-600">Building: {area.buildingName || '-'}</p>
+
+                                <div className="mt-3 h-44 overflow-hidden rounded-xl border border-slate-200">
+                                  <MapContainer center={center} zoom={17} className="h-full w-full" scrollWheelZoom={false} dragging={false} doubleClickZoom={false} zoomControl={false} attributionControl={false}>
+                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                    <CircleMarker
+                                      center={center}
+                                      radius={8}
+                                      pathOptions={{ color: '#166534', fillColor: '#22c55e', fillOpacity: 0.95 }}
+                                    />
+                                    <Circle
+                                      center={center}
+                                      radius={radius}
+                                      pathOptions={{ color: '#16a34a', fillColor: '#86efac', fillOpacity: 0.25 }}
+                                    />
+                                  </MapContainer>
+                                </div>
+
+                                <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+                                  <p>
+                                    <span className="font-semibold">Latitude:</span> {Number(area.latitude).toFixed(6)}
+                                  </p>
+                                  <p className="mt-1">
+                                    <span className="font-semibold">Longitude:</span> {Number(area.longitude).toFixed(6)}
+                                  </p>
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
@@ -1079,7 +1287,16 @@ const AdminResourcesPage = () => {
               <span className="mb-1 block text-sm font-semibold text-slate-700">Resource Type</span>
               <select
                 value={resourceForm.resourceType}
-                onChange={(event) => setResourceForm((prev) => ({ ...prev, resourceType: event.target.value }))}
+                onChange={(event) => {
+                  const nextType = event.target.value;
+                  setResourceForm((prev) => ({
+                    ...prev,
+                    resourceType: nextType,
+                    latitude: nextType === 'STUDY_AREA' ? prev.latitude : '',
+                    longitude: nextType === 'STUDY_AREA' ? prev.longitude : '',
+                    mapRadiusMeters: nextType === 'STUDY_AREA' ? (prev.mapRadiusMeters || 50) : 50,
+                  }));
+                }}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
               >
                 {RESOURCE_TYPES.map((item) => (
@@ -1222,6 +1439,79 @@ const AdminResourcesPage = () => {
                 placeholder="Optional description"
               />
             </label>
+
+            {resourceForm.resourceType === 'STUDY_AREA' && (
+              <div className="md:col-span-2 space-y-4 rounded-2xl border border-green-200 bg-green-50/40 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Study Area Location</p>
+                    <p className="text-xs text-slate-500">Use current location, type coordinates, or click the map.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={useCurrentLocation}
+                    disabled={locating}
+                    className="rounded-lg border border-green-300 bg-white px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {locating ? 'Detecting...' : 'Use Current Location'}
+                  </button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Latitude</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={resourceForm.latitude}
+                      onChange={(event) => setResourceForm((prev) => ({ ...prev, latitude: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                      placeholder="6.9068"
+                    />
+                    {resourceErrors.latitude && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.latitude}</p>}
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Longitude</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={resourceForm.longitude}
+                      onChange={(event) => setResourceForm((prev) => ({ ...prev, longitude: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                      placeholder="79.8703"
+                    />
+                    {resourceErrors.longitude && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.longitude}</p>}
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Radius (m)</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={resourceForm.mapRadiusMeters}
+                      onChange={(event) => setResourceForm((prev) => ({ ...prev, mapRadiusMeters: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                      placeholder="50"
+                    />
+                    {resourceErrors.mapRadiusMeters && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.mapRadiusMeters}</p>}
+                  </label>
+                </div>
+
+                <StudyAreaLocationPicker
+                  latitude={resourceForm.latitude}
+                  longitude={resourceForm.longitude}
+                  radius={resourceForm.mapRadiusMeters}
+                  onPick={(lat, lng) => {
+                    setResourceForm((prev) => ({
+                      ...prev,
+                      latitude: Number(lat.toFixed(6)),
+                      longitude: Number(lng.toFixed(6)),
+                    }));
+                  }}
+                />
+              </div>
+            )}
           </div>
         </ModalShell>
       )}
@@ -1257,6 +1547,13 @@ const AdminResourcesPage = () => {
             <div><span className="font-semibold text-slate-900">Capacity:</span> {detailItem.item.capacity}</div>
             <div><span className="font-semibold text-slate-900">Status:</span> {detailItem.item.status}</div>
             <div className="md:col-span-2"><span className="font-semibold text-slate-900">Description:</span> {detailItem.item.description || '-'}</div>
+            {detailItem.item.resourceType === 'STUDY_AREA' && (
+              <>
+                <div><span className="font-semibold text-slate-900">Latitude:</span> {detailItem.item.latitude ?? '-'}</div>
+                <div><span className="font-semibold text-slate-900">Longitude:</span> {detailItem.item.longitude ?? '-'}</div>
+                <div><span className="font-semibold text-slate-900">Radius:</span> {detailItem.item.mapRadiusMeters ?? '-'} m</div>
+              </>
+            )}
           </div>
         </ModalShell>
       )}
