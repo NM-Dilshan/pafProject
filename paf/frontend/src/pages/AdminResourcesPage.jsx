@@ -1,0 +1,1188 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Bell,
+  Building2,
+  CalendarCheck2,
+  ClipboardList,
+  Eye,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Plus,
+  Search,
+  ShieldUser,
+  Ticket,
+  Trash2,
+  UserRound,
+  X,
+  Wrench,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import {
+  createBuilding,
+  createResource,
+  deleteBuilding,
+  deleteResource,
+  getBuildings,
+  getResources,
+  updateBuilding,
+  updateResource,
+} from '../services/adminResourceService';
+
+const sidebarItems = [
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard' },
+  { label: 'Resources', icon: Building2, to: '/admin/resources', active: true },
+  { label: 'Manage Technicians', icon: Wrench, to: '/admin/technicians' },
+  { label: 'Manage Bookings', icon: CalendarCheck2, to: '/admin/bookings' },
+  { label: 'Manage Tickets', icon: Ticket, to: '/admin/tickets' },
+  { label: 'Reports', icon: ClipboardList, to: '/admin/reports' },
+  { label: 'Profile', icon: UserRound, to: '/profile' },
+];
+
+const RESOURCE_TYPES = [
+  { value: 'LECTURE_HALL', label: 'Lecture Hall' },
+  { value: 'STUDY_AREA', label: 'Study Area' },
+];
+
+const RESOURCE_STATUSES = [
+  { value: 'AVAILABLE', label: 'Available' },
+  { value: 'UNAVAILABLE', label: 'Unavailable' },
+  { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
+];
+
+const buildingRowTemplate = (index = 0) => ({
+  blockName: String.fromCharCode(65 + index),
+  floorCount: 1,
+});
+
+const emptyBuildingForm = () => ({
+  buildingName: '',
+  blockCount: 1,
+  blocks: [buildingRowTemplate(0)],
+});
+
+const emptyResourceForm = () => ({
+  resourceType: 'LECTURE_HALL',
+  buildingId: '',
+  blockName: '',
+  floorNumber: 1,
+  hallNumber: 1,
+  hallName: '',
+  capacity: 1,
+  status: 'AVAILABLE',
+  description: '',
+});
+
+const statusStyles = {
+  AVAILABLE: 'bg-green-100 text-green-800 ring-green-200',
+  UNAVAILABLE: 'bg-slate-100 text-slate-700 ring-slate-200',
+  UNDER_MAINTENANCE: 'bg-yellow-100 text-yellow-800 ring-yellow-200',
+};
+
+function Badge({ value }) {
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyles[value] || statusStyles.UNAVAILABLE}`}>
+      {value.replaceAll('_', ' ')}
+    </span>
+  );
+}
+
+function Toast({ toast, onClose }) {
+  if (!toast) return null;
+
+  return (
+    <div className="fixed right-4 top-4 z-[70] max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+      <div className="flex items-start gap-3">
+        <div className={`mt-0.5 h-2.5 w-2.5 rounded-full ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-slate-900">{toast.title}</p>
+          <p className="mt-1 text-sm text-slate-600">{toast.message}</p>
+        </div>
+        <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-700">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Sidebar({ onLogout }) {
+  return (
+    <aside className="hidden xl:flex xl:w-72 xl:flex-col xl:border-r xl:border-green-100 xl:bg-white">
+      <div className="flex items-center gap-3 border-b border-green-100 px-6 py-6">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-green-600 text-white">
+          <ShieldUser className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-800">Smart Campus</p>
+          <h1 className="text-lg font-extrabold text-slate-900">Operations Hub</h1>
+        </div>
+      </div>
+
+      <nav className="flex-1 space-y-1 px-4 py-6">
+        {sidebarItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.label}
+              to={item.to}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                item.active ? 'bg-green-600 text-white shadow-sm' : 'text-slate-600 hover:bg-green-50 hover:text-green-800'
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="border-t border-green-100 px-6 py-6">
+        <button
+          type="button"
+          onClick={onLogout}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-2.5 text-sm font-semibold text-green-800 transition hover:bg-green-50"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function TopNavbar({ onLogout, user }) {
+  return (
+    <header className="sticky top-0 z-20 border-b border-green-100 bg-white/90 backdrop-blur">
+      <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-green-100 text-green-800 xl:hidden">
+            <Menu className="h-5 w-5" />
+          </button>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-800">Smart Campus Admin</p>
+            <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Resources Management</h2>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-green-100 text-green-800">
+            <Bell className="h-5 w-5" />
+            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+          </button>
+
+          <div className="hidden items-center gap-2 rounded-xl border border-green-100 bg-white px-3 py-2 sm:flex">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
+              {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+            </div>
+            <p className="text-sm font-semibold text-slate-700">{user?.name || 'Admin'}</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function ModalShell({ title, subtitle, onClose, children, footer }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-900/40">
+      <div className="h-full w-full max-w-2xl overflow-y-auto bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+            {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+          </div>
+          <button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="px-6 py-6">{children}</div>
+        {footer && <div className="border-t border-slate-200 px-6 py-4">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDialog({ title, message, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+        <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+        <p className="mt-2 text-sm text-slate-600">{message}</p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={onCancel} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            Cancel
+          </button>
+          <button type="button" onClick={onConfirm} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const AdminResourcesPage = () => {
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
+  const [activeTab, setActiveTab] = useState('buildings');
+  const [buildings, setBuildings] = useState([]);
+  const [resources, setResources] = useState([]);
+  const [loadingBuildings, setLoadingBuildings] = useState(false);
+  const [loadingResources, setLoadingResources] = useState(false);
+  const [error, setError] = useState('');
+  const [toast, setToast] = useState(null);
+  const [buildingModalOpen, setBuildingModalOpen] = useState(false);
+  const [resourceModalOpen, setResourceModalOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [buildingSaving, setBuildingSaving] = useState(false);
+  const [resourceSaving, setResourceSaving] = useState(false);
+  const [buildingForm, setBuildingForm] = useState(emptyBuildingForm());
+  const [resourceForm, setResourceForm] = useState(emptyResourceForm());
+  const [buildingErrors, setBuildingErrors] = useState({});
+  const [resourceErrors, setResourceErrors] = useState({});
+  const [editingBuildingId, setEditingBuildingId] = useState(null);
+  const [editingResourceId, setEditingResourceId] = useState(null);
+  const [resourceFilters, setResourceFilters] = useState({ search: '', resourceType: '', buildingId: '', status: '' });
+
+  const selectedBuilding = useMemo(
+    () => buildings.find((item) => item.id === resourceForm.buildingId) || null,
+    [buildings, resourceForm.buildingId]
+  );
+
+  const selectedBlock = useMemo(() => {
+    if (!selectedBuilding || !resourceForm.blockName) {
+      return null;
+    }
+    return selectedBuilding.blocks?.find((block) => block.blockName === resourceForm.blockName) || null;
+  }, [resourceForm.blockName, selectedBuilding]);
+
+  const stats = useMemo(() => {
+    const buildingCount = buildings.length;
+    const resourceCount = resources.length;
+    const availableCount = resources.filter((item) => item.status === 'AVAILABLE').length;
+    const maintenanceCount = resources.filter((item) => item.status === 'UNDER_MAINTENANCE').length;
+    return { buildingCount, resourceCount, availableCount, maintenanceCount };
+  }, [buildings.length, resources]);
+
+  const showToast = (type, title, message) => {
+    setToast({ type, title, message });
+  };
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const loadBuildings = useCallback(async () => {
+    try {
+      setLoadingBuildings(true);
+      const data = await getBuildings();
+      setBuildings(Array.isArray(data) ? data : []);
+    } catch (fetchError) {
+      setError(fetchError.response?.data?.message || 'Failed to load buildings');
+    } finally {
+      setLoadingBuildings(false);
+    }
+  }, []);
+
+  const loadResources = useCallback(async (filters = {}) => {
+    try {
+      setLoadingResources(true);
+      const data = await getResources(filters);
+      setResources(Array.isArray(data) ? data : []);
+    } catch (fetchError) {
+      setError(fetchError.response?.data?.message || 'Failed to load resources');
+    } finally {
+      setLoadingResources(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBuildings();
+    loadResources();
+  }, [loadBuildings, loadResources]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadResources(resourceFilters);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [loadResources, resourceFilters]);
+
+  useEffect(() => {
+    if (!resourceForm.buildingId || !selectedBuilding) {
+      return;
+    }
+
+    const blockExists = selectedBuilding.blocks?.some((block) => block.blockName === resourceForm.blockName);
+    if (!blockExists && selectedBuilding.blocks?.length > 0) {
+      const firstBlock = selectedBuilding.blocks[0].blockName;
+      setResourceForm((prev) => ({ ...prev, blockName: firstBlock, floorNumber: 1, hallName: generateHallName(firstBlock, 1, prev.hallNumber) }));
+    }
+  }, [resourceForm.buildingId, resourceForm.blockName, selectedBuilding]);
+
+  useEffect(() => {
+    if (!resourceForm.blockName || !resourceForm.floorNumber || !resourceForm.hallNumber) {
+      return;
+    }
+    setResourceForm((prev) => ({
+      ...prev,
+      hallName: generateHallName(prev.blockName, prev.floorNumber, prev.hallNumber),
+    }));
+  }, [resourceForm.blockName, resourceForm.floorNumber, resourceForm.hallNumber]);
+
+  const validateBuildingForm = () => {
+    const nextErrors = { blocks: [] };
+    const buildingName = buildingForm.buildingName.trim();
+
+    if (!buildingName) {
+      nextErrors.buildingName = 'Building name is required';
+    }
+
+    if (!Number.isInteger(Number(buildingForm.blockCount)) || Number(buildingForm.blockCount) < 1) {
+      nextErrors.blockCount = 'Block count must be greater than 0';
+    }
+
+    if (buildingForm.blocks.length !== Number(buildingForm.blockCount)) {
+      nextErrors.blockCount = 'Number of blocks must match block count';
+    }
+
+    const seenBlocks = new Set();
+    buildingForm.blocks.forEach((block, index) => {
+      const rowErrors = {};
+      const blockName = (block.blockName || '').trim().toUpperCase();
+      const floorCount = Number(block.floorCount);
+
+      if (!/^[A-Z]$/.test(blockName)) {
+        rowErrors.blockName = 'Use a single uppercase letter';
+      }
+
+      if (seenBlocks.has(blockName)) {
+        rowErrors.blockName = 'Duplicate block name in the same building';
+      }
+
+      if (blockName) {
+        seenBlocks.add(blockName);
+      }
+
+      if (!Number.isInteger(floorCount) || floorCount < 1) {
+        rowErrors.floorCount = 'Floor count must be greater than 0';
+      }
+
+      nextErrors.blocks[index] = rowErrors;
+    });
+
+    setBuildingErrors(nextErrors);
+    return Object.keys(nextErrors).length === 1 && nextErrors.blocks.every((row) => Object.keys(row).length === 0);
+  };
+
+  const validateResourceForm = () => {
+    const nextErrors = {};
+
+    if (!resourceForm.resourceType) nextErrors.resourceType = 'Resource type is required';
+    if (!resourceForm.buildingId) nextErrors.buildingId = 'Building is required';
+    if (!resourceForm.blockName) nextErrors.blockName = 'Block is required';
+    if (!Number.isInteger(Number(resourceForm.floorNumber)) || Number(resourceForm.floorNumber) < 1) {
+      nextErrors.floorNumber = 'Floor number must be greater than 0';
+    }
+    if (!Number.isInteger(Number(resourceForm.hallNumber)) || Number(resourceForm.hallNumber) < 1 || Number(resourceForm.hallNumber) > 99) {
+      nextErrors.hallNumber = 'Hall number must be between 1 and 99';
+    }
+    if (!Number.isInteger(Number(resourceForm.capacity)) || Number(resourceForm.capacity) < 1) {
+      nextErrors.capacity = 'Capacity must be greater than 0';
+    }
+
+    if (selectedBlock && Number(resourceForm.floorNumber) > Number(selectedBlock.floorCount)) {
+      nextErrors.floorNumber = 'Floor number cannot exceed the selected block floor count';
+    }
+
+    setResourceErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const openBuildingModal = (building = null) => {
+    if (building) {
+      setEditingBuildingId(building.id);
+      setBuildingForm({
+        buildingName: building.buildingName || '',
+        blockCount: building.blockCount || 1,
+        blocks:
+          building.blocks?.map((block) => ({
+            blockName: block.blockName || '',
+            floorCount: block.floorCount || 1,
+          })) || [buildingRowTemplate(0)],
+      });
+    } else {
+      setEditingBuildingId(null);
+      setBuildingForm(emptyBuildingForm());
+    }
+    setBuildingErrors({});
+    setBuildingModalOpen(true);
+  };
+
+  const openResourceModal = (resource = null) => {
+    if (resource) {
+      setEditingResourceId(resource.id);
+      setResourceForm({
+        resourceType: resource.resourceType || 'LECTURE_HALL',
+        buildingId: resource.buildingId || '',
+        blockName: resource.blockName || '',
+        floorNumber: resource.floorNumber || 1,
+        hallNumber: resource.hallNumber || 1,
+        hallName: resource.hallName || '',
+        capacity: resource.capacity || 1,
+        status: resource.status || 'AVAILABLE',
+        description: resource.description || '',
+      });
+    } else {
+      setEditingResourceId(null);
+      const firstBuilding = buildings[0];
+      const firstBlock = firstBuilding?.blocks?.[0];
+      setResourceForm({
+        ...emptyResourceForm(),
+        buildingId: firstBuilding?.id || '',
+        blockName: firstBlock?.blockName || '',
+        floorNumber: 1,
+        hallName: generateHallName(firstBlock?.blockName || '', 1, 1),
+      });
+    }
+    setResourceErrors({});
+    setResourceModalOpen(true);
+  };
+
+  const closeModals = () => {
+    setBuildingModalOpen(false);
+    setResourceModalOpen(false);
+    setDetailItem(null);
+    setConfirmDelete(null);
+  };
+
+  const handleBuildingCountChange = (value) => {
+    const parsed = Math.max(1, Number(value) || 1);
+    setBuildingForm((prev) => {
+      const nextBlocks = prev.blocks.slice(0, parsed);
+      while (nextBlocks.length < parsed) {
+        nextBlocks.push(buildingRowTemplate(nextBlocks.length));
+      }
+      return { ...prev, blockCount: parsed, blocks: nextBlocks };
+    });
+  };
+
+  const handleBuildingSubmit = async (event) => {
+    event.preventDefault();
+    if (!validateBuildingForm()) return;
+
+    try {
+      setBuildingSaving(true);
+      const payload = {
+        buildingName: buildingForm.buildingName.trim(),
+        blockCount: Number(buildingForm.blockCount),
+        blocks: buildingForm.blocks.map((block) => ({
+          blockName: block.blockName.trim().toUpperCase(),
+          floorCount: Number(block.floorCount),
+        })),
+      };
+
+      if (editingBuildingId) {
+        await updateBuilding(editingBuildingId, payload);
+        showToast('success', 'Building updated', 'The building details were saved successfully.');
+      } else {
+        await createBuilding(payload);
+        showToast('success', 'Building created', 'The new building was added successfully.');
+      }
+
+      setBuildingModalOpen(false);
+      setEditingBuildingId(null);
+      setBuildingForm(emptyBuildingForm());
+      await loadBuildings();
+      await loadResources(resourceFilters);
+    } catch (submitError) {
+      const message = submitError.response?.data?.message || 'Failed to save building';
+      showToast('error', 'Building save failed', message);
+      setError(message);
+    } finally {
+      setBuildingSaving(false);
+    }
+  };
+
+  const handleResourceSubmit = async (event) => {
+    event.preventDefault();
+    if (!validateResourceForm()) return;
+
+    try {
+      setResourceSaving(true);
+      const payload = {
+        resourceType: resourceForm.resourceType,
+        buildingId: resourceForm.buildingId,
+        blockName: resourceForm.blockName,
+        floorNumber: Number(resourceForm.floorNumber),
+        hallNumber: Number(resourceForm.hallNumber),
+        capacity: Number(resourceForm.capacity),
+        status: resourceForm.status,
+        description: resourceForm.description,
+      };
+
+      if (editingResourceId) {
+        await updateResource(editingResourceId, payload);
+        showToast('success', 'Resource updated', 'The resource details were saved successfully.');
+      } else {
+        await createResource(payload);
+        showToast('success', 'Resource created', 'The new resource was added successfully.');
+      }
+
+      setResourceModalOpen(false);
+      setEditingResourceId(null);
+      setResourceForm(emptyResourceForm());
+      await loadResources(resourceFilters);
+    } catch (submitError) {
+      const message = submitError.response?.data?.message || 'Failed to save resource';
+      showToast('error', 'Resource save failed', message);
+      setError(message);
+    } finally {
+      setResourceSaving(false);
+    }
+  };
+
+  const handleDeleteBuilding = async () => {
+    if (!confirmDelete?.id) return;
+
+    try {
+      await deleteBuilding(confirmDelete.id);
+      showToast('success', 'Building deleted', 'The building was removed successfully.');
+      await loadBuildings();
+      await loadResources(resourceFilters);
+    } catch (deleteError) {
+      const message = deleteError.response?.data?.message || 'Unable to delete building';
+      showToast('error', 'Delete failed', message);
+    } finally {
+      closeModals();
+    }
+  };
+
+  const handleDeleteResource = async () => {
+    if (!confirmDelete?.id) return;
+
+    try {
+      await deleteResource(confirmDelete.id);
+      showToast('success', 'Resource deleted', 'The resource was removed successfully.');
+      await loadResources(resourceFilters);
+    } catch (deleteError) {
+      const message = deleteError.response?.data?.message || 'Unable to delete resource';
+      showToast('error', 'Delete failed', message);
+    } finally {
+      closeModals();
+    }
+  };
+
+  const generateHallName = (blockName, floorNumber, hallNumber) => {
+    const prefix = (blockName || '').trim().toUpperCase();
+    if (!prefix) return '';
+    return `${prefix}${String(Number(floorNumber) || 0).padStart(2, '0')}${String(Number(hallNumber) || 0).padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="min-h-screen bg-green-50 text-slate-900">
+      <Toast toast={toast} onClose={() => setToast(null)} />
+      <div className="flex min-h-screen">
+        <Sidebar onLogout={() => { logout(); navigate('/staff/login', { replace: true }); }} />
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopNavbar onLogout={() => { logout(); navigate('/staff/login', { replace: true }); }} user={user} />
+
+          <main className="flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+            <section className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Resources Management</h1>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Manage campus buildings first, then create resources under each building.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-2xl bg-green-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Buildings</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">{stats.buildingCount}</p>
+                  </div>
+                  <div className="rounded-2xl bg-green-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Resources</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">{stats.resourceCount}</p>
+                  </div>
+                  <div className="rounded-2xl bg-green-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Available</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">{stats.availableCount}</p>
+                  </div>
+                  <div className="rounded-2xl bg-green-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Maintenance</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">{stats.maintenanceCount}</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <section className="rounded-2xl border border-green-100 bg-white p-2 shadow-sm">
+              <div className="flex flex-wrap gap-2 border-b border-slate-100 p-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('buildings')}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${activeTab === 'buildings' ? 'bg-green-600 text-white shadow-sm' : 'text-slate-600 hover:bg-green-50'}`}
+                >
+                  Buildings
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('resources')}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${activeTab === 'resources' ? 'bg-green-600 text-white shadow-sm' : 'text-slate-600 hover:bg-green-50'}`}
+                >
+                  Resources
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6">
+                {activeTab === 'buildings' ? (
+                  <div className="space-y-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-900">Buildings Management</h2>
+                        <p className="mt-1 text-sm text-slate-500">Create, edit, view, and remove campus buildings.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openBuildingModal()}
+                        className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Building
+                      </button>
+                    </div>
+
+                    {loadingBuildings ? (
+                      <div className="py-20 text-center text-slate-500">Loading buildings...</div>
+                    ) : (
+                      <div className="overflow-hidden rounded-2xl border border-slate-200">
+                        <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                          <thead className="bg-slate-50">
+                            <tr>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Building Name</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Number of Blocks</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Blocks Summary</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 bg-white">
+                            {buildings.map((building) => (
+                              <tr key={building.id} className="align-top">
+                                <td className="px-4 py-4 font-semibold text-slate-800">{building.buildingName}</td>
+                                <td className="px-4 py-4 text-slate-600">{building.blockCount}</td>
+                                <td className="px-4 py-4 text-slate-600">
+                                  {building.blocks?.map((block) => `${block.blockName} (${block.floorCount} floors)`).join(', ') || '-'}
+                                </td>
+                                <td className="px-4 py-4">
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setDetailItem({ type: 'building', item: building })}
+                                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                    >
+                                      <Eye className="h-3.5 w-3.5" />
+                                      View
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openBuildingModal(building)}
+                                      className="rounded-lg border border-green-200 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-50"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDelete({ type: 'building', id: building.id, name: building.buildingName })}
+                                      className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                      Delete
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                            {buildings.length === 0 && (
+                              <tr>
+                                <td className="px-4 py-16 text-center text-slate-500" colSpan="4">
+                                  No buildings have been added yet.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-900">Resources Management</h2>
+                        <p className="mt-1 text-sm text-slate-500">Create and manage hall-based resources under existing buildings.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openResourceModal()}
+                        disabled={buildings.length === 0}
+                        className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Resource
+                      </button>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Search Hall Name</span>
+                        <div className="relative">
+                          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <input
+                            value={resourceFilters.search}
+                            onChange={(event) => setResourceFilters((prev) => ({ ...prev, search: event.target.value }))}
+                            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-green-500"
+                            placeholder="Search hall name"
+                          />
+                        </div>
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Resource Type</span>
+                        <select
+                          value={resourceFilters.resourceType}
+                          onChange={(event) => setResourceFilters((prev) => ({ ...prev, resourceType: event.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                        >
+                          <option value="">All Types</option>
+                          {RESOURCE_TYPES.map((item) => (
+                            <option key={item.value} value={item.value}>
+                              {item.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Building</span>
+                        <select
+                          value={resourceFilters.buildingId}
+                          onChange={(event) => setResourceFilters((prev) => ({ ...prev, buildingId: event.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                        >
+                          <option value="">All Buildings</option>
+                          {buildings.map((building) => (
+                            <option key={building.id} value={building.id}>
+                              {building.buildingName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Status</span>
+                        <select
+                          value={resourceFilters.status}
+                          onChange={(event) => setResourceFilters((prev) => ({ ...prev, status: event.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                        >
+                          <option value="">All Statuses</option>
+                          {RESOURCE_STATUSES.map((item) => (
+                            <option key={item.value} value={item.value}>
+                              {item.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    {loadingResources ? (
+                      <div className="py-20 text-center text-slate-500">Loading resources...</div>
+                    ) : (
+                      <div className="overflow-hidden rounded-2xl border border-slate-200">
+                        <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                          <thead className="bg-slate-50">
+                            <tr>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Hall Name</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Resource Type</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Building</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Block</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Floor</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Hall Number</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Capacity</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Status</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 bg-white">
+                            {resources.map((resource) => (
+                              <tr key={resource.id} className="align-top">
+                                <td className="px-4 py-4 font-semibold text-slate-800">{resource.hallName}</td>
+                                <td className="px-4 py-4 text-slate-600">{RESOURCE_TYPES.find((item) => item.value === resource.resourceType)?.label || resource.resourceType}</td>
+                                <td className="px-4 py-4 text-slate-600">{resource.buildingName}</td>
+                                <td className="px-4 py-4 text-slate-600">{resource.blockName}</td>
+                                <td className="px-4 py-4 text-slate-600">{resource.floorNumber}</td>
+                                <td className="px-4 py-4 text-slate-600">{resource.hallNumber}</td>
+                                <td className="px-4 py-4 text-slate-600">{resource.capacity}</td>
+                                <td className="px-4 py-4">
+                                  <Badge value={resource.status} />
+                                </td>
+                                <td className="px-4 py-4">
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setDetailItem({ type: 'resource', item: resource })}
+                                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                    >
+                                      <Eye className="h-3.5 w-3.5" />
+                                      View
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openResourceModal(resource)}
+                                      className="rounded-lg border border-green-200 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-50"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDelete({ type: 'resource', id: resource.id, name: resource.hallName })}
+                                      className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                      Delete
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                            {resources.length === 0 && (
+                              <tr>
+                                <td className="px-4 py-16 text-center text-slate-500" colSpan="9">
+                                  No resources found for the current filters.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+
+      {buildingModalOpen && (
+        <ModalShell
+          title={editingBuildingId ? 'Edit Building' : 'Add Building'}
+          subtitle="Define block rows and floor counts for each building."
+          onClose={() => setBuildingModalOpen(false)}
+          footer={
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setBuildingModalOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button type="button" onClick={handleBuildingSubmit} disabled={buildingSaving} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+                {buildingSaving ? 'Saving...' : 'Save Building'}
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-5">
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Building Name</span>
+              <input
+                value={buildingForm.buildingName}
+                onChange={(event) => setBuildingForm((prev) => ({ ...prev, buildingName: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                placeholder="Main Building"
+              />
+              {buildingErrors.buildingName && <p className="mt-1 text-xs font-medium text-red-600">{buildingErrors.buildingName}</p>}
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Block Count</span>
+              <input
+                type="number"
+                min="1"
+                value={buildingForm.blockCount}
+                onChange={(event) => handleBuildingCountChange(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+              />
+              {buildingErrors.blockCount && <p className="mt-1 text-xs font-medium text-red-600">{buildingErrors.blockCount}</p>}
+            </label>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-slate-700">Block Rows</span>
+                <span className="text-xs text-slate-500">Must match block count</span>
+              </div>
+
+              <div className="space-y-3">
+                {buildingForm.blocks.map((block, index) => (
+                  <div key={index} className="grid gap-3 rounded-2xl border border-slate-200 p-4 md:grid-cols-[1fr_1fr]">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Block Name</span>
+                      <input
+                        value={block.blockName}
+                        maxLength={1}
+                        onChange={(event) => {
+                          const value = event.target.value.toUpperCase();
+                          setBuildingForm((prev) => {
+                            const blocks = [...prev.blocks];
+                            blocks[index] = { ...blocks[index], blockName: value };
+                            return { ...prev, blocks };
+                          });
+                        }}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                        placeholder="A"
+                      />
+                      {buildingErrors.blocks?.[index]?.blockName && (
+                        <p className="mt-1 text-xs font-medium text-red-600">{buildingErrors.blocks[index].blockName}</p>
+                      )}
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Floor Count</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={block.floorCount}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setBuildingForm((prev) => {
+                            const blocks = [...prev.blocks];
+                            blocks[index] = { ...blocks[index], floorCount: value };
+                            return { ...prev, blocks };
+                          });
+                        }}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                        placeholder="3"
+                      />
+                      {buildingErrors.blocks?.[index]?.floorCount && (
+                        <p className="mt-1 text-xs font-medium text-red-600">{buildingErrors.blocks[index].floorCount}</p>
+                      )}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </ModalShell>
+      )}
+
+      {resourceModalOpen && (
+        <ModalShell
+          title={editingResourceId ? 'Edit Resource' : 'Add Resource'}
+          subtitle="Hall name is generated automatically from block, floor, and hall number."
+          onClose={() => setResourceModalOpen(false)}
+          footer={
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setResourceModalOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button type="button" onClick={handleResourceSubmit} disabled={resourceSaving} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+                {resourceSaving ? 'Saving...' : 'Save Resource'}
+              </button>
+            </div>
+          }
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Resource Type</span>
+              <select
+                value={resourceForm.resourceType}
+                onChange={(event) => setResourceForm((prev) => ({ ...prev, resourceType: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+              >
+                {RESOURCE_TYPES.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
+              </select>
+              {resourceErrors.resourceType && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.resourceType}</p>}
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Building</span>
+              <select
+                value={resourceForm.buildingId}
+                onChange={(event) => setResourceForm((prev) => ({ ...prev, buildingId: event.target.value, blockName: '', floorNumber: 1, hallName: '' }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+              >
+                <option value="">Select building</option>
+                {buildings.map((building) => (
+                  <option key={building.id} value={building.id}>{building.buildingName}</option>
+                ))}
+              </select>
+              {resourceErrors.buildingId && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.buildingId}</p>}
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Block</span>
+              <select
+                value={resourceForm.blockName}
+                disabled={!selectedBuilding}
+                onChange={(event) => setResourceForm((prev) => ({ ...prev, blockName: event.target.value, floorNumber: 1, hallName: generateHallName(event.target.value, 1, prev.hallNumber) }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500 disabled:bg-slate-100"
+              >
+                <option value="">Select block</option>
+                {selectedBuilding?.blocks?.map((block) => (
+                  <option key={block.blockName} value={block.blockName}>{block.blockName}</option>
+                ))}
+              </select>
+              {resourceErrors.blockName && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.blockName}</p>}
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Floor</span>
+              <select
+                value={resourceForm.floorNumber}
+                disabled={!selectedBlock}
+                onChange={(event) => setResourceForm((prev) => ({ ...prev, floorNumber: Number(event.target.value) }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500 disabled:bg-slate-100"
+              >
+                {Array.from({ length: selectedBlock?.floorCount || 1 }, (_, index) => index + 1).map((floor) => (
+                  <option key={floor} value={floor}>{floor}</option>
+                ))}
+              </select>
+              {resourceErrors.floorNumber && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.floorNumber}</p>}
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Hall Number</span>
+              <input
+                type="number"
+                min="1"
+                max="99"
+                value={resourceForm.hallNumber}
+                onChange={(event) => setResourceForm((prev) => ({ ...prev, hallNumber: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+              />
+              {resourceErrors.hallNumber && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.hallNumber}</p>}
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Hall Name</span>
+              <input
+                value={resourceForm.hallName}
+                readOnly
+                className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm text-slate-600 outline-none"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Capacity</span>
+              <input
+                type="number"
+                min="1"
+                value={resourceForm.capacity}
+                onChange={(event) => setResourceForm((prev) => ({ ...prev, capacity: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+              />
+              {resourceErrors.capacity && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.capacity}</p>}
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Status</span>
+              <select
+                value={resourceForm.status}
+                onChange={(event) => setResourceForm((prev) => ({ ...prev, status: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+              >
+                {RESOURCE_STATUSES.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="md:col-span-2 block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Description</span>
+              <textarea
+                rows="4"
+                value={resourceForm.description}
+                onChange={(event) => setResourceForm((prev) => ({ ...prev, description: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                placeholder="Optional description"
+              />
+            </label>
+          </div>
+        </ModalShell>
+      )}
+
+      {detailItem && detailItem.type === 'building' && (
+        <ModalShell title="Building Details" subtitle="Review building blocks and floor counts." onClose={() => setDetailItem(null)}>
+          <div className="space-y-4 text-sm text-slate-600">
+            <div><span className="font-semibold text-slate-900">Name:</span> {detailItem.item.buildingName}</div>
+            <div><span className="font-semibold text-slate-900">Block Count:</span> {detailItem.item.blockCount}</div>
+            <div>
+              <span className="font-semibold text-slate-900">Blocks:</span>
+              <div className="mt-2 space-y-2">
+                {detailItem.item.blocks?.map((block) => (
+                  <div key={block.blockName} className="rounded-xl bg-slate-50 px-3 py-2">
+                    {block.blockName} - {block.floorCount} floors
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </ModalShell>
+      )}
+
+      {detailItem && detailItem.type === 'resource' && (
+        <ModalShell title="Resource Details" subtitle="Review hall and assignment details." onClose={() => setDetailItem(null)}>
+          <div className="grid gap-3 text-sm text-slate-600 md:grid-cols-2">
+            <div><span className="font-semibold text-slate-900">Hall Name:</span> {detailItem.item.hallName}</div>
+            <div><span className="font-semibold text-slate-900">Type:</span> {detailItem.item.resourceType}</div>
+            <div><span className="font-semibold text-slate-900">Building:</span> {detailItem.item.buildingName}</div>
+            <div><span className="font-semibold text-slate-900">Block:</span> {detailItem.item.blockName}</div>
+            <div><span className="font-semibold text-slate-900">Floor:</span> {detailItem.item.floorNumber}</div>
+            <div><span className="font-semibold text-slate-900">Hall Number:</span> {detailItem.item.hallNumber}</div>
+            <div><span className="font-semibold text-slate-900">Capacity:</span> {detailItem.item.capacity}</div>
+            <div><span className="font-semibold text-slate-900">Status:</span> {detailItem.item.status}</div>
+            <div className="md:col-span-2"><span className="font-semibold text-slate-900">Description:</span> {detailItem.item.description || '-'}</div>
+          </div>
+        </ModalShell>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={confirmDelete.type === 'building' ? 'Delete Building' : 'Delete Resource'}
+          message={
+            confirmDelete.type === 'building'
+              ? `Are you sure you want to delete building "${confirmDelete.name}"? This action cannot be undone.`
+              : `Are you sure you want to delete resource "${confirmDelete.name}"? This action cannot be undone.`
+          }
+          onConfirm={confirmDelete.type === 'building' ? handleDeleteBuilding : handleDeleteResource}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default AdminResourcesPage;

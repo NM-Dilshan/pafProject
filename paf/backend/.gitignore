@@ -45,5 +45,18 @@ src/main/resources/application-*.properties
 ### Node.js ###
 node_modules/
 package-lock.json
+<<<<<<<<< Temporary merge branch 1
+npm-debug.log*
+nyarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.npm/
+.npmrc
+npx-cache/
+.yarn/
+dist/
+=========
+*.log
 npm-debug.log
 yarn-error.log
+>>>>>>>>> Temporary merge branch 2
