@@ -1,5 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import NotificationBell from '../components/NotificationBell'
+import NotificationDropdown from '../components/NotificationDropdown'
 import {
   Bell,
   BookOpen,
@@ -16,7 +19,7 @@ import {
 
 const navigationItems = [
   { label: 'Dashboard', icon: Home, href: '#dashboard' },
-  { label: 'Resources', icon: BookOpen, href: '#resources' },
+  { label: 'Study Areas', icon: BookOpen, to: '/study-areas' },
   { label: 'Bookings', icon: CalendarCheck2, href: '#bookings' },
   { label: 'My Bookings', icon: ClipboardList, href: '#my-bookings' },
   { label: 'Tickets', icon: MessageSquareWarning, href: '#tickets' },
@@ -76,11 +79,22 @@ function Sidebar() {
       <nav className="flex-1 space-y-1 px-4 py-6">
         {navigationItems.map((item) => {
           const Icon = item.icon
+          const itemClassName = 'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-green-50 hover:text-green-700'
+
+          if (item.to) {
+            return (
+              <Link key={item.label} to={item.to} className={itemClassName}>
+                <Icon className="h-5 w-5" />
+                {item.label}
+              </Link>
+            )
+          }
+
           return (
             <a
               key={item.label}
               href={item.href}
-              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-green-50 hover:text-green-700"
+              className={itemClassName}
             >
               <Icon className="h-5 w-5" />
               {item.label}
@@ -101,7 +115,7 @@ function Sidebar() {
   )
 }
 
-function Navbar({ user, onLogout }) {
+function Navbar({ user, onLogout, isNotificationOpen, setIsNotificationOpen }) {
   return (
     <header className="sticky top-0 z-30 border-b border-green-100 bg-white/90 backdrop-blur-md">
       <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
@@ -126,10 +140,13 @@ function Navbar({ user, onLogout }) {
             Search
           </button>
 
-          <button className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-green-100 bg-white text-green-700 shadow-sm">
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
+          <div className="relative">
+            <NotificationBell onBellClick={() => setIsNotificationOpen((value) => !value)} />
+            <NotificationDropdown
+              isOpen={isNotificationOpen}
+              onClose={() => setIsNotificationOpen(false)}
+            />
+          </div>
 
           <div className="flex items-center gap-3 rounded-2xl border border-green-100 bg-white px-3 py-2 shadow-sm">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
@@ -171,9 +188,10 @@ function StatCard({ title, value, icon, change }) {
   )
 }
 
-function QuickActionButton({ title, description, icon, accent = 'bg-green-600' }) {
-  return (
-    <button className="group flex items-center gap-4 rounded-3xl border border-green-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+function QuickActionButton({ title, description, icon, accent = 'bg-green-600', to }) {
+  const className = 'group flex items-center gap-4 rounded-3xl border border-green-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg'
+  const content = (
+    <>
       <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white ${accent}`}>
         {React.createElement(icon, { className: 'h-5 w-5' })}
       </span>
@@ -181,12 +199,27 @@ function QuickActionButton({ title, description, icon, accent = 'bg-green-600' }
         <span className="block text-sm font-bold text-green-900">{title}</span>
         <span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span>
       </span>
+    </>
+  )
+
+  if (to) {
+    return (
+      <Link to={to} className={className}>
+        {content}
+      </Link>
+    )
+  }
+
+  return (
+    <button className={className}>
+      {content}
     </button>
   )
 }
 
 export default function HomePage() {
   const { user, logout } = useAuth()
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-green-50 text-slate-900">
@@ -194,7 +227,12 @@ export default function HomePage() {
         <Sidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <Navbar user={user} onLogout={logout} />
+          <Navbar
+            user={user}
+            onLogout={logout}
+            isNotificationOpen={isNotificationOpen}
+            setIsNotificationOpen={setIsNotificationOpen}
+          />
 
           <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
             <section className="overflow-hidden rounded-[2rem] border border-green-100 bg-gradient-to-br from-white to-green-50 p-6 shadow-sm sm:p-8">
@@ -263,12 +301,13 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <div className="mt-5 grid gap-4 md:grid-cols-3" id="resources">
                   <QuickActionButton
                     title="Book a Resource"
                     description="Reserve rooms, labs, or equipment in seconds."
                     icon={CalendarCheck2}
                     accent="bg-green-600"
+                    to="/study-areas"
                   />
                   <QuickActionButton
                     title="Report an Issue"

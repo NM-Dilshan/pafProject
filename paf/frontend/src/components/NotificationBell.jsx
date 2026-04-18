@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getUnreadCount } from '../services/notificationService';
+import { getNotifications } from '../services/notificationService';
 
 const NotificationBell = ({ onBellClick }) => {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -7,25 +7,27 @@ const NotificationBell = ({ onBellClick }) => {
   const [isOpen, setIsOpen] = useState(false);
   const bellRef = useRef(null);
 
-  useEffect(() => {
-    fetchUnreadCount();
-    
-    // Set up interval to refresh count periodically
-    const interval = setInterval(fetchUnreadCount, 30000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchUnreadCount = async () => {
+  const fetchNotifications = async () => {
     try {
-      const count = await getUnreadCount();
-      setUnreadCount(count);
+      const notifications = await getNotifications();
+      const unreadCount = notifications.filter((n) => n.read === false || n.status === 'UNREAD').length;
+      setUnreadCount(unreadCount);
     } catch (error) {
       console.error('Failed to fetch unread count:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchNotifications();
+
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleClick = () => {
     setIsOpen(!isOpen);
