@@ -37,6 +37,8 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
 
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [conflictError, setConflictError] = useState(false);
+  const [showConflictSuggestions, setShowConflictSuggestions] = useState(false);
 
   // Fetch resources on component mount
   useEffect(() => {
@@ -232,6 +234,9 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
       endTime: slot.endTime,
     }));
     setShowSlotSuggestions(false);
+    setShowConflictSuggestions(false);
+    setConflictError(false);
+    setError('');
   };
 
   // Handle form submission
@@ -280,8 +285,26 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to create booking';
+      const isConflictError = err.response?.status === 409 || errorMessage.toLowerCase().includes('conflict');
+      
       setError(`❌ ${errorMessage}`);
       console.error('Booking creation error:', err);
+
+      // If conflict detected, fetch available slots automatically
+      if (isConflictError && formData.resourceId && formData.date) {
+        setConflictError(true);
+        setShowConflictSuggestions(true);
+        try {
+          const slots = await bookingService.getAvailableSlots(
+            formData.resourceId,
+            formData.date,
+            7 // Get 7 suggestions for conflicts
+          );
+          setAvailableSlots(slots);
+        } catch (slotErr) {
+          console.error('Error fetching available slots:', slotErr);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -313,16 +336,72 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
           <div className="px-6 py-8 sm:px-8">
             {/* Error Alert */}
             {error && (
-              <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 animate-in fade-in-0 duration-200">
+              <div className={`mb-6 rounded-lg border p-4 animate-in fade-in-0 duration-200 ${
+                conflictError
+                  ? 'border-orange-200 bg-orange-50'
+                  : 'border-red-200 bg-red-50'
+              }`}>
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <svg className={`h-5 w-5 ${
+                      conflictError ? 'text-orange-400' : 'text-red-400'
+                    }`} viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-red-800">{error}</p>
+                    <p className={`text-sm font-medium ${
+                      conflictError
+                        ? 'text-orange-800'
+                        : 'text-red-800'
+                    }`}>{error}</p>
+                    {conflictError && (
+                      <p className="mt-1 text-xs text-orange-700">
+                        Don't worry! Check out the available time slots below.
+                      </p>
+                    )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Conflict Suggestions - Only show when conflict error and suggestions available */}
+            {conflictError && availableSlots.length > 0 && (
+              <div className="mb-6 rounded-lg border-2 border-orange-300 bg-orange-50 p-5 animate-in fade-in-0 duration-300">
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="h-6 w-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-orange-900">
+                      ✨ We found {availableSlots.length} available time slot{availableSlots.length > 1 ? 's' : ''} on {formData.date}!
+                    </h3>
+                    <p className="mt-1 text-xs text-orange-700">
+                      Click any time slot below to instantly update your booking request.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {availableSlots.map((slot, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSelectSlot(slot)}
+                      className="group rounded-lg border-2 border-orange-300 bg-white px-4 py-3 text-left text-sm font-semibold text-orange-900 transition-all hover:border-orange-500 hover:bg-orange-100 active:bg-orange-200 shadow-sm hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="block text-base font-bold">{slot.startTime} — {slot.endTime}</span>
+                          <span className="text-xs text-orange-700">Click to select</span>
+                        </div>
+                        <svg className="h-5 w-5 text-orange-400 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
