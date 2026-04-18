@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   Bell,
@@ -19,7 +20,7 @@ const navigationItems = [
   { label: 'Resources', icon: BookOpen, href: '#resources' },
   { label: 'Bookings', icon: CalendarCheck2, href: '#bookings' },
   { label: 'My Bookings', icon: ClipboardList, href: '#my-bookings' },
-  { label: 'Tickets', icon: MessageSquareWarning, href: '#tickets' },
+  { label: 'Tickets', icon: MessageSquareWarning, href: '/incident-ticketing' },
   { label: 'Notifications', icon: Bell, href: '#notifications' },
   { label: 'Profile', icon: UserRound, href: '#profile' },
 ]
@@ -171,9 +172,12 @@ function StatCard({ title, value, icon, change }) {
   )
 }
 
-function QuickActionButton({ title, description, icon, accent = 'bg-green-600' }) {
+function QuickActionButton({ title, description, icon, accent = 'bg-green-600', onClick }) {
   return (
-    <button className="group flex items-center gap-4 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+    <button 
+      onClick={onClick}
+      className="group flex items-center gap-4 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
       <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white ${accent}`}>
         {React.createElement(icon, { className: 'h-5 w-5' })}
       </span>
@@ -187,6 +191,7 @@ function QuickActionButton({ title, description, icon, accent = 'bg-green-600' }
 
 export default function HomePage() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -214,7 +219,7 @@ export default function HomePage() {
                     <a href="#bookings" className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700">
                       Book a Resource
                     </a>
-                    <a href="#tickets" className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-slate-100">
+                    <a href="/incident-ticketing" className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-slate-100">
                       Report an Issue
                     </a>
                     <a href="#notifications" className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-slate-100">
@@ -275,6 +280,7 @@ export default function HomePage() {
                     description="Log facility or IT issues for quick follow-up."
                     icon={CircleAlert}
                     accent="bg-cyan-500"
+                    onClick={() => navigate('/incident-ticketing')}
                   />
                   <QuickActionButton
                     title="View Notifications"
