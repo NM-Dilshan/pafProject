@@ -12,13 +12,14 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminTicketsPage from './pages/AdminTicketsPage';
 import EnhancedRegistrationPage from './pages/EnhancedRegistrationPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
+import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import RegistrationPage from './pages/RegistrationPage';
 import StaffLoginPage from './pages/StaffLoginPage';
+import StudyAreasPage from './pages/StudyAreasPage';
 import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
-import UserDashboardPage from './pages/UserDashboardPage';
 import './App.css';
 
 function Unauthorized() {
@@ -42,7 +43,8 @@ function App() {
           </Route>
 
           <Route element={<UserRoute />}>
-            <Route path="/dashboard" element={<UserDashboardPage />} />
+            <Route path="/dashboard" element={<HomePage />} />
+            <Route path="/study-areas" element={<StudyAreasPage />} />
           </Route>
 
           <Route element={<AdminRoute />}>
