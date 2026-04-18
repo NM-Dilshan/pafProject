@@ -208,10 +208,43 @@ function QuickActionButton({ title, description, icon, accent = 'bg-green-600', 
 
 const UserDashboardPage = () => {
   const { user, logout } = useAuth()
+   const [showLocationPopup, setShowLocationPopup] = useState(() =>
+    typeof navigator !== 'undefined' && Boolean(navigator.geolocation),
+  )
+  const enableLocation = () => {
+    localStorage.setItem('studyAreaLocationPreference', 'enabled')
+    setShowLocationPopup(false)
+  }
   const [isNotificationOpen, setIsNotificationOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-green-50 text-slate-900">
+      {showLocationPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">Location Access</p>
+            <h2 className="mt-2 text-xl font-extrabold text-emerald-900">Turn on location?</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Enable location services to improve study area availability and live occupancy updates.
+            </p>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowLocationPopup(false)}
+                className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Not now
+              </button>
+              <button
+                onClick={enableLocation}
+                className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+              >
+                Enable Location
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex min-h-screen">
         <Sidebar />
 
