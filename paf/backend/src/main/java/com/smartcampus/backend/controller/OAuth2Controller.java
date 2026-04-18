@@ -29,7 +29,7 @@ public class OAuth2Controller {
             
             // Redirect to frontend with token
             String redirectUrl = String.format(
-                "http://localhost:5174/auth/callback?token=%s&user=%s",
+                "http://localhost:5173/auth/callback?token=%s&user=%s",
                 response.getToken(),
                 java.net.URLEncoder.encode(
                     String.format("{\"id\":\"%s\",\"name\":\"%s\",\"email\":\"%s\",\"role\":\"%s\"}",
@@ -46,7 +46,7 @@ public class OAuth2Controller {
                 .header("Location", redirectUrl)
                 .build();
         } catch (Exception e) {
-            String errorUrl = "http://localhost:5174/login?error=" + 
+            String errorUrl = "http://localhost:5173/login?error=" + 
                 java.net.URLEncoder.encode(e.getMessage(), java.nio.charset.StandardCharsets.UTF_8);
             return ResponseEntity.status(302)
                 .header("Location", errorUrl)

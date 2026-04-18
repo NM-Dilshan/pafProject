@@ -17,6 +17,9 @@ public class ResourceResponse {
     private int capacity;
     private ResourceStatus status;
     private String description;
+    private Double latitude;
+    private Double longitude;
+    private Integer mapRadiusMeters;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -109,6 +112,30 @@ public class ResourceResponse {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
+
+    public Integer getMapRadiusMeters() {
+        return mapRadiusMeters;
+    }
+
+    public void setMapRadiusMeters(Integer mapRadiusMeters) {
+        this.mapRadiusMeters = mapRadiusMeters;
     }
 
     public LocalDateTime getCreatedAt() {

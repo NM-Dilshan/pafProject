@@ -51,6 +51,10 @@ public class ResourceManagementService {
         resource.setCapacity(request.getCapacity());
         resource.setStatus(request.getStatus());
         resource.setDescription(request.getDescription());
+        resource.setLatitude(request.getResourceType() == ResourceType.STUDY_AREA ? request.getLatitude() : null);
+        resource.setLongitude(request.getResourceType() == ResourceType.STUDY_AREA ? request.getLongitude() : null);
+        resource.setMapRadiusMeters(
+                request.getResourceType() == ResourceType.STUDY_AREA ? request.getMapRadiusMeters() : null);
         resource.setCreatedAt(LocalDateTime.now());
         resource.setUpdatedAt(LocalDateTime.now());
 
@@ -100,6 +104,10 @@ public class ResourceManagementService {
         existing.setCapacity(request.getCapacity());
         existing.setStatus(request.getStatus());
         existing.setDescription(request.getDescription());
+        existing.setLatitude(request.getResourceType() == ResourceType.STUDY_AREA ? request.getLatitude() : null);
+        existing.setLongitude(request.getResourceType() == ResourceType.STUDY_AREA ? request.getLongitude() : null);
+        existing.setMapRadiusMeters(
+                request.getResourceType() == ResourceType.STUDY_AREA ? request.getMapRadiusMeters() : null);
         existing.setUpdatedAt(LocalDateTime.now());
 
         return mapToResponse(resourceRepository.save(existing));
@@ -144,6 +152,21 @@ public class ResourceManagementService {
         if (request.getFloorNumber() > block.getFloorCount()) {
             throw new ValidationException("Floor number cannot exceed the selected block's floor count");
         }
+
+        if (request.getResourceType() == ResourceType.STUDY_AREA) {
+            if (request.getLatitude() == null || request.getLongitude() == null) {
+                throw new ValidationException("Latitude and longitude are required for study areas");
+            }
+            if (request.getLatitude() < -90 || request.getLatitude() > 90) {
+                throw new ValidationException("Latitude must be between -90 and 90");
+            }
+            if (request.getLongitude() < -180 || request.getLongitude() > 180) {
+                throw new ValidationException("Longitude must be between -180 and 180");
+            }
+            if (request.getMapRadiusMeters() == null || request.getMapRadiusMeters() < 1) {
+                throw new ValidationException("Radius must be greater than 0 for study areas");
+            }
+        }
     }
 
     private Building findBuilding(String buildingId) {
@@ -167,6 +190,9 @@ public class ResourceManagementService {
         response.setCapacity(resource.getCapacity());
         response.setStatus(resource.getStatus());
         response.setDescription(resource.getDescription());
+        response.setLatitude(resource.getLatitude());
+        response.setLongitude(resource.getLongitude());
+        response.setMapRadiusMeters(resource.getMapRadiusMeters());
         response.setCreatedAt(resource.getCreatedAt());
         response.setUpdatedAt(resource.getUpdatedAt());
         return response;

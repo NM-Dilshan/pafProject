@@ -22,6 +22,7 @@ import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
 import UserDashboardPage from './pages/UserDashboardPage';
 import { IncidentTicketingPage } from './pages/Incident_tickting';
 import './App.css';
+import StudyAreasPage from './facilities/pages/StudyAreasPage';
 
 function Unauthorized() {
   return <Navigate to="/login" replace />;
@@ -33,8 +34,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<EnhancedRegistrationPage />} />
-          <Route path="/register-simple" element={<RegistrationPage />} />
+          <Route path="/register" element={<RegistrationPage />} />
+          <Route path="/register-enhanced" element={<EnhancedRegistrationPage />} />
           <Route path="/staff/login" element={<StaffLoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
@@ -45,6 +46,7 @@ function App() {
 
           <Route element={<UserRoute />}>
             <Route path="/dashboard" element={<UserDashboardPage />} />
+            <Route path="/study-areas" element={<StudyAreasPage />} />
           </Route>
 
           <Route element={<AdminRoute />}>
