@@ -12,6 +12,7 @@ import 'leaflet/dist/leaflet.css';
 
 const LOCATION_CHECKIN_INTERVAL_MS = 60 * 1000;
 const OCCUPANCY_REFRESH_INTERVAL_MS = 20 * 1000;
+const LOCATION_PROMPT_DISMISSED_KEY = 'studyAreaLocationPromptDismissed';
 
 export default function StudyAreasPage() {
   const hasGeolocation = typeof navigator !== 'undefined' && Boolean(navigator.geolocation);
@@ -29,9 +30,17 @@ export default function StudyAreasPage() {
   const [locationAccessEnabled, setLocationAccessEnabled] = useState(
     hasGeolocation && savedLocationPreference === 'enabled',
   );
-  const [showLocationPopup, setShowLocationPopup] = useState(
-    hasGeolocation && savedLocationPreference !== 'enabled',
-  );
+  const [showLocationPopup, setShowLocationPopup] = useState(() => {
+    if (!hasGeolocation || savedLocationPreference === 'enabled') {
+      return false;
+    }
+
+    if (typeof sessionStorage === 'undefined') {
+      return true;
+    }
+
+    return sessionStorage.getItem(LOCATION_PROMPT_DISMISSED_KEY) !== 'true';
+  });
 
   useEffect(() => {
     const loadStudyAreas = async () => {
@@ -126,6 +135,9 @@ export default function StudyAreasPage() {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('studyAreaLocationPreference', 'enabled');
     }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(LOCATION_PROMPT_DISMISSED_KEY);
+    }
     setLocationAccessEnabled(true);
     setShowLocationPopup(false);
   };
@@ -133,6 +145,9 @@ export default function StudyAreasPage() {
   const skipLocationSharing = () => {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('studyAreaLocationPreference', 'disabled');
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(LOCATION_PROMPT_DISMISSED_KEY, 'true');
     }
     setLocationAccessEnabled(false);
     setShowLocationPopup(false);
@@ -259,28 +274,38 @@ export default function StudyAreasPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       {showLocationPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="fixed right-4 top-4 z-50 w-[calc(100vw-2rem)] max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:right-6 sm:top-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">Location Access</p>
             <h2 className="mt-2 text-xl font-extrabold text-emerald-900">Turn on location?</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               Enable location to mark your position on study area maps and live occupancy.
             </p>
-
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                onClick={skipLocationSharing}
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Not now
-              </button>
-              <button
-                onClick={enableLocationSharing}
-                className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
-              >
-                Enable Location
-              </button>
             </div>
+            <button
+              type="button"
+              onClick={skipLocationSharing}
+              className="rounded-full px-2 py-1 text-sm font-semibold text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Dismiss location prompt"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <button
+              onClick={skipLocationSharing}
+              className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              Not now
+            </button>
+            <button
+              onClick={enableLocationSharing}
+              className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+            >
+              Enable Location
+            </button>
           </div>
         </div>
       )}

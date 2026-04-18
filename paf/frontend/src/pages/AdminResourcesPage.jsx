@@ -17,11 +17,16 @@ import {
   Ticket,
   Trash2,
   UserRound,
+  Users,
   X,
   Wrench,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import 'leaflet/dist/leaflet.css';
+import {
+  getStudyAreaActiveMembers,
+  getStudyAreaOccupancy,
+} from '../facilities/services/facilitiesService';
 import {
   createBuilding,
   createResource,
@@ -291,6 +296,8 @@ const AdminResourcesPage = () => {
   const [buildings, setBuildings] = useState([]);
   const [resources, setResources] = useState([]);
   const [studyAreaResources, setStudyAreaResources] = useState([]);
+  const [studyAreaOccupancy, setStudyAreaOccupancy] = useState({});
+  const [studyAreaActiveMembers, setStudyAreaActiveMembers] = useState({});
   const [loadingBuildings, setLoadingBuildings] = useState(false);
   const [loadingResources, setLoadingResources] = useState(false);
   const [loadingStudyAreas, setLoadingStudyAreas] = useState(false);
@@ -337,6 +344,42 @@ const AdminResourcesPage = () => {
     () => studyAreaResources.filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))),
     [studyAreaResources],
   );
+
+  const getOccupancyState = (activeCount, capacity) => {
+    const normalizedCapacity = Number(capacity) || 0;
+
+    if (normalizedCapacity <= 0) {
+      return {
+        label: 'Normal',
+        badgeClass: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
+        cardClass: 'border-emerald-200 bg-emerald-50/40',
+      };
+    }
+
+    const percentage = (Number(activeCount) / normalizedCapacity) * 100;
+
+    if (percentage < 50) {
+      return {
+        label: 'Normal',
+        badgeClass: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
+        cardClass: 'border-emerald-200 bg-emerald-50/40',
+      };
+    }
+
+    if (percentage <= 90) {
+      return {
+        label: 'Busy',
+        badgeClass: 'bg-amber-100 text-amber-800 ring-amber-200',
+        cardClass: 'border-amber-200 bg-amber-50/50',
+      };
+    }
+
+    return {
+      label: 'Crowded',
+      badgeClass: 'bg-rose-100 text-rose-800 ring-rose-200',
+      cardClass: 'border-rose-200 bg-rose-50/50',
+    };
+  };
 
   const showToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -386,8 +429,25 @@ const AdminResourcesPage = () => {
   const loadStudyAreas = useCallback(async () => {
     try {
       setLoadingStudyAreas(true);
-      const data = await getResources({ resourceType: 'STUDY_AREA' });
-      setStudyAreaResources(Array.isArray(data) ? data : []);
+      const [resourceData, occupancyData, activeMembersData] = await Promise.all([
+        getResources({ resourceType: 'STUDY_AREA' }),
+        getStudyAreaOccupancy(),
+        getStudyAreaActiveMembers(),
+      ]);
+
+      setStudyAreaResources(Array.isArray(resourceData) ? resourceData : []);
+
+      const nextOccupancy = {};
+      (Array.isArray(occupancyData) ? occupancyData : []).forEach((item) => {
+        nextOccupancy[item.studyAreaId] = item.activeUserCount;
+      });
+      setStudyAreaOccupancy(nextOccupancy);
+
+      const nextActiveMembers = {};
+      (Array.isArray(activeMembersData) ? activeMembersData : []).forEach((item) => {
+        nextActiveMembers[item.studyAreaId] = Array.isArray(item.activeMembers) ? item.activeMembers : [];
+      });
+      setStudyAreaActiveMembers(nextActiveMembers);
     } catch (fetchError) {
       setError(fetchError.response?.data?.message || 'Failed to load study areas');
     } finally {
@@ -407,6 +467,14 @@ const AdminResourcesPage = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, [loadResources, resourceFilters]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      loadStudyAreas();
+    }, 20 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadStudyAreas]);
 
   useEffect(() => {
     if (!resourceForm.buildingId || !selectedBuilding) {
@@ -1061,20 +1129,39 @@ const AdminResourcesPage = () => {
                           {mappedStudyAreas.map((area) => {
                             const center = [Number(area.latitude), Number(area.longitude)];
                             const radius = Number(area.mapRadiusMeters) || 50;
+                            const activeCount = studyAreaOccupancy[area.id] || 0;
+                            const activeMembers = studyAreaActiveMembers[area.id] || [];
+                            const occupancyState = getOccupancyState(activeCount, area.capacity);
 
                             return (
-                              <article key={area.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                              <article key={area.id} className={`rounded-2xl border p-4 shadow-sm ${occupancyState.cardClass}`}>
                                 <div className="flex items-start justify-between gap-3">
                                   <h3 className="inline-flex items-center gap-2 text-base font-bold text-slate-900">
                                     <MapPin className="h-4 w-4 text-green-700" />
                                     {area.hallName}
                                   </h3>
-                                  <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+                                  <div className="flex flex-col items-end gap-2">
+                                    <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
                                     {radius} m
-                                  </span>
+                                    </span>
+                                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${occupancyState.badgeClass}`}>
+                                      {occupancyState.label}
+                                    </span>
+                                  </div>
                                 </div>
 
                                 <p className="mt-2 text-sm text-slate-600">Building: {area.buildingName || '-'}</p>
+                                <p className="mt-1 text-sm text-slate-600">Capacity: {area.capacity || 0}</p>
+
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-800">
+                                    <Users className="h-3.5 w-3.5" />
+                                    {activeCount} active
+                                  </span>
+                                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                    {activeMembers.length} member(s)
+                                  </span>
+                                </div>
 
                                 <div className="mt-3 h-44 overflow-hidden rounded-xl border border-slate-200">
                                   <MapContainer center={center} zoom={17} className="h-full w-full" scrollWheelZoom={false} dragging={false} doubleClickZoom={false} zoomControl={false} attributionControl={false}>

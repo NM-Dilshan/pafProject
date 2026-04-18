@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { staffLogin } from '../services/authService';
+import { setToken, setUser as persistUser, staffLogin } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 
 const StaffLoginPage = () => {
   const [username, setUsername] = useState('');
@@ -10,6 +11,7 @@ const StaffLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -22,10 +24,9 @@ const StaffLoginPage = () => {
         ...response,
         isStaff: true,
       };
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(normalizedUser));
-      localStorage.setItem('smartcampus_token', response.token);
-      localStorage.setItem('smartcampus_user', JSON.stringify(normalizedUser));
+      setToken(response.token);
+      persistUser(normalizedUser);
+      setUser(normalizedUser);
 
       if (response.mustChangePassword) {
         navigate('/staff/change-password', {
