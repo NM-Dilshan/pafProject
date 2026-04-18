@@ -33,8 +33,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<EnhancedRegistrationPage />} />
-          <Route path="/register-simple" element={<RegistrationPage />} />
+          <Route path="/register" element={<RegistrationPage />} />
+          <Route path="/register-enhanced" element={<EnhancedRegistrationPage />} />
           <Route path="/staff/login" element={<StaffLoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
