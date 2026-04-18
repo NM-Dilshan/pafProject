@@ -737,31 +737,59 @@ const AdminResourcesPage = () => {
           <TopNavbar onLogout={() => { logout(); navigate('/staff/login', { replace: true }); }} user={user} />
 
           <main className="flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-            <section className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <section className="overflow-hidden rounded-[2rem] border border-green-100 bg-gradient-to-br from-white to-green-50 p-6 shadow-sm sm:p-8">
+              <div className="grid gap-8 lg:grid-cols-[1.35fr_0.85fr] lg:items-center">
                 <div>
-                  <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Resources Management</h1>
-                  <p className="mt-2 text-sm text-slate-600">
-                    Manage campus buildings first, then create resources under each building.
+                  <p className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-green-700">
+                    Admin workspace
                   </p>
+                  <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+                    Resource control center
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                    Manage buildings, halls, and study areas from one place. Keep locations accurate and maintain resource availability across campus.
+                  </p>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl bg-white/90 p-4 ring-1 ring-green-100">
+                      <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Buildings</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">{stats.buildingCount}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/90 p-4 ring-1 ring-green-100">
+                      <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Resources</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">{stats.resourceCount}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/90 p-4 ring-1 ring-green-100">
+                      <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Available</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">{stats.availableCount}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/90 p-4 ring-1 ring-green-100">
+                      <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Maintenance</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">{stats.maintenanceCount}</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl bg-green-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Buildings</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">{stats.buildingCount}</p>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+                  <div className="rounded-3xl bg-green-600 p-5 text-white shadow-xl shadow-green-200">
+                    <p className="text-sm font-medium text-green-100">Live status</p>
+                    <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-2xl font-black">{stats.availableCount}</p>
+                        <p className="text-green-100/90">Available</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-black">{stats.maintenanceCount}</p>
+                        <p className="text-green-100/90">Maintenance</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="rounded-2xl bg-green-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Resources</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">{stats.resourceCount}</p>
-                  </div>
-                  <div className="rounded-2xl bg-green-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Available</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">{stats.availableCount}</p>
-                  </div>
-                  <div className="rounded-2xl bg-green-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Maintenance</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">{stats.maintenanceCount}</p>
+
+                  <div className="rounded-3xl border border-green-100 bg-white p-5 shadow-sm">
+                    <p className="text-sm font-semibold text-green-900">Admin note</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Create buildings with correct block floor counts first. It helps keep hall naming and study area mapping consistent.
+                    </p>
                   </div>
                 </div>
               </div>
