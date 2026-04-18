@@ -17,7 +17,7 @@ import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import RegistrationPage from './pages/RegistrationPage';
 import StaffLoginPage from './pages/StaffLoginPage';
-import StudyAreasPage from './facilities/pages/StudyAreasPage';
+import StudyAreasPage from './pages/StudyAreasPage';
 import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
 import UserDashboardPage from './pages/UserDashboardPage';
