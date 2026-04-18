@@ -36,6 +36,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
   });
 
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   // Fetch resources on component mount
   useEffect(() => {
@@ -77,94 +78,138 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
   }, [formData.resourceId, formData.date]);
 
   /**
-   * Comprehensive validation for all form fields
+   * Comprehensive real-time validation for all form fields
    * Validates:
    * - Required fields
    * - Date constraints (not in past)
    * - Time constraints (working hours 08:00-18:00)
    * - Time logic (end time after start time)
-   * - Purpose length (minimum 3 characters)
-   * - Attendees count (at least 1)
+   * - Duration constraint (minimum 30 minutes)
+   * - Purpose length (3-100 characters)
+   * - Attendees count (1-1000)
    * - Capacity constraint (attendees vs resource capacity)
    */
-  const validateForm = () => {
-    const newErrors = {};
+  const validateField = (name, value, currentFormData) => {
+    const fieldErrors = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Validate Resource Selection
-    if (!formData.resourceId) {
-      newErrors.resourceId = 'Please select a resource';
+    switch (name) {
+      case 'resourceId':
+        if (!value) {
+          fieldErrors[name] = 'Please select a resource';
+        }
+        break;
+
+      case 'date':
+        if (!value) {
+          fieldErrors[name] = 'Please select a date';
+        } else if (new Date(value) < today) {
+          fieldErrors[name] = 'Cannot book in the past';
+        }
+        break;
+
+      case 'startTime':
+        if (!value) {
+          fieldErrors[name] = 'Start time is required';
+        } else if (value < '08:00') {
+          fieldErrors[name] = 'Start time must be at or after 08:00 AM';
+        } else if (value > '18:00') {
+          fieldErrors[name] = 'Start time must be at or before 06:00 PM';
+        }
+        // Check if end time exists and validate duration
+        if (currentFormData.endTime && value >= currentFormData.endTime) {
+          fieldErrors[name] = 'Start time must be before end time';
+        }
+        // Check minimum duration
+        if (currentFormData.endTime && value) {
+          const [startHour, startMin] = value.split(':');
+          const [endHour, endMin] = currentFormData.endTime.split(':');
+          const startTotalMin = parseInt(startHour) * 60 + parseInt(startMin);
+          const endTotalMin = parseInt(endHour) * 60 + parseInt(endMin);
+          const duration = endTotalMin - startTotalMin;
+          if (duration < 30 && duration > 0) {
+            fieldErrors[name] = 'Minimum booking duration is 30 minutes';
+          }
+        }
+        break;
+
+      case 'endTime':
+        if (!value) {
+          fieldErrors[name] = 'End time is required';
+        } else if (value > '18:00') {
+          fieldErrors[name] = 'End time must be at or before 06:00 PM';
+        } else if (value < '08:00') {
+          fieldErrors[name] = 'End time must be at or after 08:00 AM';
+        }
+        // Check against start time
+        if (currentFormData.startTime) {
+          if (value <= currentFormData.startTime) {
+            fieldErrors[name] = 'End time must be after start time';
+          }
+          // Check minimum duration
+          const [startHour, startMin] = currentFormData.startTime.split(':');
+          const [endHour, endMin] = value.split(':');
+          const startTotalMin = parseInt(startHour) * 60 + parseInt(startMin);
+          const endTotalMin = parseInt(endHour) * 60 + parseInt(endMin);
+          const duration = endTotalMin - startTotalMin;
+          if (duration < 30) {
+            fieldErrors[name] = 'Minimum booking duration is 30 minutes';
+          }
+        }
+        break;
+
+      case 'purpose':
+        if (!value || value.trim().length === 0) {
+          fieldErrors[name] = 'Purpose is required';
+        } else if (value.trim().length < 3) {
+          fieldErrors[name] = 'Purpose must be at least 3 characters';
+        } else if (value.length > 100) {
+          fieldErrors[name] = 'Purpose must not exceed 100 characters';
+        }
+        break;
+
+      case 'attendees':
+        const attendeeNum = parseInt(value);
+        if (!value) {
+          fieldErrors[name] = 'Number of attendees is required';
+        } else if (isNaN(attendeeNum) || attendeeNum < 1) {
+          fieldErrors[name] = 'Must have at least 1 attendee';
+        } else if (attendeeNum > 1000) {
+          fieldErrors[name] = 'Attendees cannot exceed 1000';
+        }
+        // Check capacity
+        const selectedResource = resources.find((r) => r.id === currentFormData.resourceId);
+        if (selectedResource && attendeeNum > selectedResource.capacity) {
+          fieldErrors[name] = `Exceeds resource capacity (${selectedResource.capacity} max)`;
+        }
+        break;
+
+      default:
+        break;
     }
 
-    // Validate Date
-    if (!formData.date) {
-      newErrors.date = 'Please select a date';
-    } else if (new Date(formData.date) < today) {
-      newErrors.date = 'Date cannot be in the past';
-    }
+    return fieldErrors;
+  };
 
-    // Validate Start Time
-    if (!formData.startTime) {
-      newErrors.startTime = 'Please enter start time';
-    }
+  // Real-time validation on form data change
+  const validateFormData = (data) => {
+    const newErrors = {};
 
-    // Validate End Time
-    if (!formData.endTime) {
-      newErrors.endTime = 'Please enter end time';
-    }
-
-    // Validate Time Logic
-    if (formData.startTime && formData.endTime) {
-      if (formData.startTime >= formData.endTime) {
-        newErrors.endTime = 'End time must be after start time';
-      }
-
-      // Validate Working Hours (08:00 - 18:00)
-      if (formData.startTime < '08:00') {
-        newErrors.startTime = 'Start time must be at or after 08:00 AM';
-      }
-      if (formData.endTime > '18:00') {
-        newErrors.endTime = 'End time must be at or before 06:00 PM';
-      }
-
-      // Check minimum booking duration (at least 30 minutes)
-      const [startHour, startMin] = formData.startTime.split(':');
-      const [endHour, endMin] = formData.endTime.split(':');
-      const startTotalMin = parseInt(startHour) * 60 + parseInt(startMin);
-      const endTotalMin = parseInt(endHour) * 60 + parseInt(endMin);
-      const duration = endTotalMin - startTotalMin;
-
-      if (duration < 30) {
-        newErrors.endTime = 'Booking must be at least 30 minutes long';
-      }
-    }
-
-    // Validate Purpose
-    if (!formData.purpose || formData.purpose.trim().length < 3) {
-      newErrors.purpose = 'Purpose must be at least 3 characters long';
-    }
-    if (formData.purpose.length > 100) {
-      newErrors.purpose = 'Purpose must not exceed 100 characters';
-    }
-
-    // Validate Attendees
-    if (formData.attendees < 1) {
-      newErrors.attendees = 'Attendees must be at least 1';
-    }
-    if (formData.attendees > 1000) {
-      newErrors.attendees = 'Attendees cannot exceed 1000';
-    }
-
-    // Validate against resource capacity
-    const selectedResource = resources.find((r) => r.id === formData.resourceId);
-    if (selectedResource && formData.attendees > selectedResource.capacity) {
-      newErrors.capacity = `Attendees (${formData.attendees}) exceed resource capacity (${selectedResource.capacity})`;
-    }
+    // Validate all fields
+    Object.keys(data).forEach((key) => {
+      const fieldErrors = validateField(key, data[key], data);
+      Object.assign(newErrors, fieldErrors);
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  // Validate form whenever formData changes
+  useEffect(() => {
+    validateFormData(formData);
+  }, [formData, resources]);
 
   // Handle input changes with real-time error clearing
   const handleChange = (e) => {
@@ -173,13 +218,10 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
       ...prev,
       [name]: value,
     }));
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
-    }
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
   };
 
   // Handle slot suggestion selection
@@ -198,7 +240,16 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
     setError('');
     setSuccess('');
 
-    if (!validateForm()) {
+    // Mark all fields as touched
+    const allTouched = Object.keys(formData).reduce((acc, key) => {
+      acc[key] = true;
+      return acc;
+    }, {});
+    setTouched(allTouched);
+
+    // Validate form one final time
+    if (!validateFormData(formData)) {
+      setError('Please fix all errors before submitting');
       return;
     }
 
@@ -218,6 +269,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
         attendees: 1,
         notes: '',
       });
+      setTouched({});
 
       // Call parent callback
       if (onBookingCreated) {
@@ -234,6 +286,15 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
       setLoading(false);
     }
   };
+
+  // Check if form is valid
+  const isFormValid = Object.keys(errors).length === 0 && 
+                     formData.resourceId && 
+                     formData.date && 
+                     formData.startTime && 
+                     formData.endTime && 
+                     formData.purpose.trim().length >= 3 &&
+                     formData.attendees >= 1;
 
   // Get selected resource for info display
   const selectedResource = resources.find((r) => r.id === formData.resourceId);
@@ -297,7 +358,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   onChange={handleChange}
                   disabled={loading}
                   className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    errors.resourceId
+                    touched.resourceId && errors.resourceId
                       ? 'border-red-300 bg-red-50 text-gray-900'
                       : 'border-gray-300 bg-white text-gray-900 hover:border-gray-400'
                   } ${loading ? 'cursor-not-allowed opacity-60' : ''}`}
@@ -309,7 +370,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                     </option>
                   ))}
                 </select>
-                {errors.resourceId && (
+                {touched.resourceId && errors.resourceId && (
                   <p className="mt-2 flex items-center text-sm font-medium text-red-600">
                     <svg className="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18.101 12.93l-.902-14.85a1.5 1.5 0 00-1.528-1.393H4.329a1.5 1.5 0 00-1.529 1.393L1.899 12.93A3 3 0 104.743 19h10.514a3 3 0 00-2.857-6.07z" clipRule="evenodd" />
@@ -365,12 +426,12 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   onChange={handleChange}
                   min={new Date().toISOString().split('T')[0]}
                   className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    errors.date
+                    touched.date && errors.date
                       ? 'border-red-300 bg-red-50 text-gray-900'
                       : 'border-gray-300 bg-white text-gray-900'
                   }`}
                 />
-                {errors.date && (
+                {touched.date && errors.date && (
                   <p className="mt-2 flex items-center text-sm font-medium text-red-600">
                     <svg className="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18.101 12.93l-.902-14.85a1.5 1.5 0 00-1.528-1.393H4.329a1.5 1.5 0 00-1.529 1.393L1.899 12.93A3 3 0 104.743 19h10.514a3 3 0 00-2.857-6.07z" clipRule="evenodd" />
@@ -395,12 +456,12 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                     min="08:00"
                     max="18:00"
                     className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      errors.startTime
+                      touched.startTime && errors.startTime
                         ? 'border-red-300 bg-red-50 text-gray-900'
                         : 'border-gray-300 bg-white text-gray-900'
                     }`}
                   />
-                  {errors.startTime && (
+                  {touched.startTime && errors.startTime && (
                     <p className="mt-2 flex items-center text-sm font-medium text-red-600">
                       <svg className="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18.101 12.93l-.902-14.85a1.5 1.5 0 00-1.528-1.393H4.329a1.5 1.5 0 00-1.529 1.393L1.899 12.93A3 3 0 104.743 19h10.514a3 3 0 00-2.857-6.07z" clipRule="evenodd" />
@@ -423,12 +484,12 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                     min="08:00"
                     max="18:00"
                     className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      errors.endTime
+                      touched.endTime && errors.endTime
                         ? 'border-red-300 bg-red-50 text-gray-900'
                         : 'border-gray-300 bg-white text-gray-900'
                     }`}
                   />
-                  {errors.endTime && (
+                  {touched.endTime && errors.endTime && (
                     <p className="mt-2 flex items-center text-sm font-medium text-red-600">
                       <svg className="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18.101 12.93l-.902-14.85a1.5 1.5 0 00-1.528-1.393H4.329a1.5 1.5 0 00-1.529 1.393L1.899 12.93A3 3 0 104.743 19h10.514a3 3 0 00-2.857-6.07z" clipRule="evenodd" />
@@ -486,14 +547,14 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   placeholder="e.g., Lecture Class, Team Meeting, Research Lab Session"
                   maxLength="100"
                   className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    errors.purpose
+                    touched.purpose && errors.purpose
                       ? 'border-red-300 bg-red-50 text-gray-900'
                       : 'border-gray-300 bg-white text-gray-900'
                   }`}
                 />
                 <div className="mt-1 flex items-center justify-between">
                   <p className="text-xs text-gray-500">{formData.purpose.length}/100 characters</p>
-                  {errors.purpose && (
+                  {touched.purpose && errors.purpose && (
                     <p className="flex items-center text-xs font-medium text-red-600">
                       <svg className="mr-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18.101 12.93l-.902-14.85a1.5 1.5 0 00-1.528-1.393H4.329a1.5 1.5 0 00-1.529 1.393L1.899 12.93A3 3 0 104.743 19h10.514a3 3 0 00-2.857-6.07z" clipRule="evenodd" />
@@ -518,12 +579,12 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   min="1"
                   max="1000"
                   className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    errors.attendees || errors.capacity
+                    touched.attendees && (errors.attendees || errors.capacity)
                       ? 'border-red-300 bg-red-50 text-gray-900'
                       : 'border-gray-300 bg-white text-gray-900'
                   }`}
                 />
-                {(errors.attendees || errors.capacity) && (
+                {touched.attendees && (errors.attendees || errors.capacity) && (
                   <p className="mt-2 flex items-center text-sm font-medium text-red-600">
                     <svg className="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18.101 12.93l-.902-14.85a1.5 1.5 0 00-1.528-1.393H4.329a1.5 1.5 0 00-1.529 1.393L1.899 12.93A3 3 0 104.743 19h10.514a3 3 0 00-2.857-6.07z" clipRule="evenodd" />
@@ -569,12 +630,13 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
               <div className="flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row">
                 <button
                   type="submit"
-                  disabled={loading}
-                  className={`flex items-center justify-center rounded-lg px-6 py-3 font-semibold text-white transition-all duration-200 ${
-                    loading
-                      ? 'cursor-not-allowed bg-gray-400'
-                      : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-md hover:shadow-lg'
+                  disabled={loading || !isFormValid}
+                  className={`flex items-center justify-center rounded-lg px-6 py-3 font-semibold transition-all duration-200 ${
+                    loading || !isFormValid
+                      ? 'cursor-not-allowed bg-gray-400 text-white opacity-75'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-md hover:shadow-lg'
                   }`}
+                  title={!isFormValid ? 'Please fix validation errors before submitting' : ''}
                 >
                   {loading ? (
                     <>
@@ -603,6 +665,26 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   </button>
                 )}
               </div>
+
+              {/* Validation Summary */}
+              {Object.keys(errors).length > 0 && (
+                <div className="mt-4 rounded-lg border-2 border-red-200 bg-red-50 p-4">
+                  <h3 className="flex items-center text-sm font-semibold text-red-900">
+                    <svg className="mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    Please fix the errors below:
+                  </h3>
+                  <ul className="mt-2 space-y-1">
+                    {Object.entries(errors).map(([field, message]) => (
+                      <li key={field} className="flex items-start text-xs text-red-800">
+                        <span className="mr-2 mt-1">•</span>
+                        <span>{message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </form>
 
             {/* Info Section */}
