@@ -264,6 +264,20 @@
   border-radius: 999px;
 }
 
+.staff-logo-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.staff-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  display: block;
+}
+
 .glass-form {
   display: flex;
   flex-direction: column;
@@ -537,15 +551,17 @@
 }
 
 .login-glass-card .glass-title {
-  font-size: 42px;
+  font-size: 32px;
   margin-bottom: 2px;
 }
 
 .login-glass-card .glass-subtitle {
+  font-size: 20px;
   margin-bottom: 4px;
 }
 
 .login-glass-card .glass-caption {
+  font-size: 13px;
   margin-bottom: 16px;
 }
 
@@ -636,7 +652,7 @@
   }
 
   .login-glass-card .glass-title {
-    font-size: 38px;
+    font-size: 28px;
   }
 }
 
@@ -657,7 +673,11 @@
   }
 
   .login-glass-card .glass-title {
-    font-size: 32px;
+    font-size: 24px;
+  }
+
+  .login-glass-card .glass-subtitle {
+    font-size: 18px;
   }
 }
 

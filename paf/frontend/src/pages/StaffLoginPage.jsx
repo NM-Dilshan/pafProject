@@ -44,11 +44,11 @@ const StaffLoginPage = () => {
   return (
     <div className="staff-login-page auth-glass-page">
       <div className="glass-card">
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <div className="staff-logo-wrap">
           <img
             src="/sliit-campus-logo-.png"
             alt="SLIIT Logo"
-            style={{ width: '80px', height: '80px', borderRadius: '16px' }}
+            className="staff-logo"
           />
         </div>
 
