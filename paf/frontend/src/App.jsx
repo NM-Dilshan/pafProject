@@ -9,10 +9,10 @@ import TechnicianManager from './components/admin/TechnicianManager';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import AdminBookingsPage from './pages/AdminBookingsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminResourcesPage from './pages/AdminResourcesPage';
 import AdminTicketsPage from './pages/AdminTicketsPage';
 import EnhancedRegistrationPage from './pages/EnhancedRegistrationPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
-import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import RegistrationPage from './pages/RegistrationPage';
@@ -20,6 +20,7 @@ import StaffLoginPage from './pages/StaffLoginPage';
 import StudyAreasPage from './pages/StudyAreasPage';
 import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
+import UserDashboardPage from './pages/UserDashboardPage';
 import './App.css';
 
 function Unauthorized() {
@@ -43,12 +44,13 @@ function App() {
           </Route>
 
           <Route element={<UserRoute />}>
-            <Route path="/dashboard" element={<HomePage />} />
+            <Route path="/dashboard" element={<UserDashboardPage />} />
             <Route path="/study-areas" element={<StudyAreasPage />} />
           </Route>
 
           <Route element={<AdminRoute />}>
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/admin/resources" element={<AdminResourcesPage />} />
             <Route path="/admin/technicians" element={<TechnicianManager />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
             <Route path="/admin/bookings" element={<AdminBookingsPage />} />
