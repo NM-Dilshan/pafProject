@@ -221,6 +221,41 @@ export default function StudyAreasPage() {
     return { stroke: '#dc2626', fill: '#fca5a5' };
   };
 
+  const getOccupancyState = (activeCount, capacity) => {
+    const normalizedCapacity = Number(capacity) || 0;
+    if (normalizedCapacity <= 0) {
+      return {
+        label: 'Normal',
+        badgeClass: 'bg-emerald-100 text-emerald-800',
+        cardClass: 'border-emerald-200 bg-emerald-50/40',
+      };
+    }
+
+    const percentage = (Number(activeCount) / normalizedCapacity) * 100;
+
+    if (percentage < 50) {
+      return {
+        label: 'Normal',
+        badgeClass: 'bg-emerald-100 text-emerald-800',
+        cardClass: 'border-emerald-200 bg-emerald-50/40',
+      };
+    }
+
+    if (percentage <= 90) {
+      return {
+        label: 'Busy',
+        badgeClass: 'bg-amber-100 text-amber-800',
+        cardClass: 'border-amber-200 bg-amber-50/50',
+      };
+    }
+
+    return {
+      label: 'Crowded',
+      badgeClass: 'bg-rose-100 text-rose-800',
+      cardClass: 'border-rose-200 bg-rose-50/50',
+    };
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       {showLocationPopup && (
@@ -289,9 +324,10 @@ export default function StudyAreasPage() {
               const activeMembers = activeMembersMap[area.id] || [];
               const inside = isUserInsideArea(area);
               const circleColors = getCircleColors(activeCount, area.capacity);
+              const occupancyState = getOccupancyState(activeCount, area.capacity);
 
               return (
-                <article key={area.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <article key={area.id} className={`rounded-3xl border p-5 shadow-sm ${occupancyState.cardClass}`}>
                   <div className="flex items-start justify-between gap-3">
                     <h2 className="inline-flex items-center gap-2 text-lg font-bold text-emerald-900">
                       <BookOpen className="h-5 w-5 text-emerald-600" />
@@ -321,6 +357,13 @@ export default function StudyAreasPage() {
                     </div>
                   </div>
                   <p className="mt-1 text-sm text-slate-600">Capacity: {area.capacity || 0}</p>
+
+                  <div className="mt-2">
+                    <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold ${occupancyState.badgeClass}`}>
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: circleColors.stroke }} />
+                      {occupancyState.label}
+                    </span>
+                  </div>
 
                   <div className="mt-3 h-44 overflow-hidden rounded-2xl border border-slate-200">
                     <MapContainer

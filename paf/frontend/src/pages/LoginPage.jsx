@@ -66,6 +66,7 @@ const LoginPage = () => {
       } else if (response.user?.role === 'TECHNICIAN') {
         navigate('/technician/dashboard');
       } else {
+        sessionStorage.setItem('showLocationPrompt', 'true');//location acces permission for users
         navigate('/dashboard');
       }
     } catch (err) {
