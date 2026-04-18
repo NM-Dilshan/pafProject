@@ -21,10 +21,14 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [resourceFilter, setResourceFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [actioningId, setActioningId] = useState(null);
   const [actioningStatus, setActioningStatus] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [reason, setReason] = useState('');
   const [currentAction, setCurrentAction] = useState(null); // 'APPROVE' or 'REJECT'
 
@@ -48,15 +52,40 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
     }
   };
 
-  // Filter bookings by search term
+  // Filter bookings by search term, date, resource, and status
+  const getUniqueResources = () => {
+    const resources = new Map();
+    bookings.forEach((booking) => {
+      if (booking.resource?.id && !resources.has(booking.resource.id)) {
+        resources.set(booking.resource.id, booking.resource);
+      }
+    });
+    return Array.from(resources.values()).sort((a, b) =>
+      a.hallName.localeCompare(b.hallName)
+    );
+  };
+
   const filteredBookings = bookings.filter((booking) => {
+    // Search filter
     const searchLower = searchTerm.toLowerCase();
-    return (
+    const matchesSearch =
+      !searchTerm ||
       booking.resource?.hallName?.toLowerCase().includes(searchLower) ||
       booking.user?.name?.toLowerCase().includes(searchLower) ||
       booking.user?.email?.toLowerCase().includes(searchLower) ||
-      booking.purpose?.toLowerCase().includes(searchLower)
-    );
+      booking.purpose?.toLowerCase().includes(searchLower);
+
+    // Date filter
+    const matchesDate = !dateFilter || booking.date === dateFilter;
+
+    // Resource filter
+    const matchesResource =
+      !resourceFilter || booking.resource?.id === resourceFilter;
+
+    // Status filter
+    const matchesStatus = statusFilter === 'ALL' || booking.status === statusFilter;
+
+    return matchesSearch && matchesDate && matchesResource && matchesStatus;
   });
 
   const openActionModal = (booking, action) => {
@@ -192,37 +221,193 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
 
         {/* Search and Stats */}
         <div className="mb-6 rounded-lg bg-white p-4 shadow sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by resource, user, purpose..."
-                  className="block w-full rounded-lg border-2 border-gray-300 px-4 py-3 pr-10 text-sm focus:border-blue-500 focus:outline-none"
+          {/* Search Bar */}
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by resource, user, purpose..."
+                className="block w-full rounded-lg border-2 border-gray-300 px-4 py-3 pr-10 text-sm focus:border-blue-500 focus:outline-none"
+              />
+              <svg
+                className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
-                <svg
-                  className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
+              </svg>
             </div>
 
-            <div className="inline-flex items-center gap-2 rounded-lg bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-800">
+            <div className="inline-flex items-center gap-2 rounded-lg bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-800 self-start sm:self-auto">
               <span className="inline-block h-3 w-3 rounded-full bg-amber-400"></span>
-              {bookings.length} Pending Bookings
+              {filteredBookings.length} of {bookings.length}
             </div>
+
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-3 font-semibold transition-all duration-200 ${
+                showFilters
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <svg
+                className={`h-5 w-5 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                />
+              </svg>
+              Filters
+            </button>
           </div>
+
+          {/* Filter Controls */}
+          {showFilters && (
+            <div className="border-t border-gray-200 pt-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                {/* Date Filter */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-gray-600">
+                    Filter by Date
+                  </label>
+                  <input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  />
+                  {dateFilter && (
+                    <button
+                      onClick={() => setDateFilter('')}
+                      className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold"
+                    >
+                      Clear date filter
+                    </button>
+                  )}
+                </div>
+
+                {/* Resource Filter */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-gray-600">
+                    Filter by Resource
+                  </label>
+                  <select
+                    value={resourceFilter}
+                    onChange={(e) => setResourceFilter(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">All Resources</option>
+                    {getUniqueResources().map((resource) => (
+                      <option key={resource.id} value={resource.id}>
+                        {resource.hallName}
+                      </option>
+                    ))}
+                  </select>
+                  {resourceFilter && (
+                    <button
+                      onClick={() => setResourceFilter('')}
+                      className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold"
+                    >
+                      Clear resource filter
+                    </button>
+                  )}
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-gray-600">
+                    Filter by Status
+                  </label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                  {statusFilter !== 'ALL' && (
+                    <button
+                      onClick={() => setStatusFilter('ALL')}
+                      className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold"
+                    >
+                      Clear status filter
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Active Filters Display */}
+              {(dateFilter || resourceFilter || statusFilter !== 'ALL') && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {dateFilter && (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                      📅 {dateFilter}
+                      <button
+                        onClick={() => setDateFilter('')}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                  {resourceFilter && (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                      🏛️ {getUniqueResources().find((r) => r.id === resourceFilter)?.hallName}
+                      <button
+                        onClick={() => setResourceFilter('')}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                  {statusFilter !== 'ALL' && (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                      {statusFilter === 'PENDING' && '⏳'}
+                      {statusFilter === 'APPROVED' && '✓'}
+                      {statusFilter === 'REJECTED' && '✗'}
+                      {statusFilter}
+                      <button
+                        onClick={() => setStatusFilter('ALL')}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                  <button
+                    onClick={() => {
+                      setDateFilter('');
+                      setResourceFilter('');
+                      setStatusFilter('ALL');
+                      setSearchTerm('');
+                    }}
+                    className="text-xs text-red-600 hover:text-red-700 font-semibold"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Loading State */}
@@ -277,11 +462,37 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
               />
             </svg>
             <h3 className="mt-4 text-lg font-semibold text-gray-900">
-              No Results
+              No Results Found
             </h3>
             <p className="mt-2 text-gray-600">
-              No bookings match your search criteria.
+              No bookings match your current search and filter criteria.
             </p>
+            {(searchTerm || dateFilter || resourceFilter || statusFilter !== 'ALL') && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setDateFilter('');
+                  setResourceFilter('');
+                  setStatusFilter('ALL');
+                }}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition-all duration-200 hover:bg-blue-700"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Clear All Filters
+              </button>
+            )}
           </div>
         )}
 
