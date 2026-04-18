@@ -208,9 +208,17 @@ function QuickActionButton({ title, description, icon, accent = 'bg-green-600', 
 
 const UserDashboardPage = () => {
   const { user, logout } = useAuth()
-   const [showLocationPopup, setShowLocationPopup] = useState(() =>
-    typeof navigator !== 'undefined' && Boolean(navigator.geolocation),
-  )
+  const [showLocationPopup, setShowLocationPopup] = useState(() => {
+    const showPromptOnNextDashboardVisit = sessionStorage.getItem('showLocationPrompt') === 'true'
+    const isLocationSupported = typeof navigator !== 'undefined' && Boolean(navigator.geolocation)
+    const locationPreference = localStorage.getItem('studyAreaLocationPreference')
+    const shouldShowPopup = showPromptOnNextDashboardVisit && isLocationSupported && locationPreference !== 'enabled'
+
+    sessionStorage.removeItem('showLocationPrompt')
+
+    return shouldShowPopup
+  })
+
   const enableLocation = () => {
     localStorage.setItem('studyAreaLocationPreference', 'enabled')
     setShowLocationPopup(false)
