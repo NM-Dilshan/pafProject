@@ -1,43 +1,28 @@
-import React, { useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import PortalHeader from '../components/PortalHeader'
+import { motion } from 'framer-motion'
+import bookingService from '../services/bookingService'
+import ticketApiService from './Incident_tickting/services/ticketApiService'
+import { getActiveCampusAlerts } from '../services/campusAlertService'
+import './UserDashboardPage.css'
 import {
+  AlertTriangle,
+  ArrowRight,
   Bell,
   BookOpen,
   CalendarCheck2,
   CircleAlert,
+  CircleCheckBig,
   ClipboardList,
-  Home,
-  LogOut,
-  Menu,
   MessageSquareWarning,
-  Search,
-  UserRound,
+  Wrench,
 } from 'lucide-react'
 
-const navigationItems = [
-  { label: 'Dashboard', icon: Home, href: '#dashboard' },
-  { label: 'Study Areas', icon: BookOpen, href: '/study-areas' },
-  { label: 'Bookings', icon: CalendarCheck2, href: '#bookings' },
-  { label: 'My Bookings', icon: ClipboardList, href: '#my-bookings' },
-  { label: 'Tickets', icon: MessageSquareWarning, href: '#tickets' },
-  { label: 'Notifications', icon: Bell, href: '#notifications' },
-  { label: 'Profile', icon: UserRound, href: '#profile' },
-]
-
-const statCards = [
-  { title: 'Total Bookings', value: '128', icon: CalendarCheck2, change: '+12% this month' },
-  { title: 'Pending Requests', value: '14', icon: ClipboardList, change: '3 awaiting approval' },
-  { title: 'Open Tickets', value: '7', icon: CircleAlert, change: '2 urgent' },
-  { title: 'Approved Bookings', value: '97', icon: BookOpen, change: '+18 this week' },
-]
-
-const recentBookings = [
-  { resource: 'Computer Lab A', date: 'Apr 16, 2026', time: '10:00 AM', status: 'Approved' },
-  { resource: 'Auditorium', date: 'Apr 17, 2026', time: '01:30 PM', status: 'Pending' },
-  { resource: 'Meeting Room 2', date: 'Apr 18, 2026', time: '03:00 PM', status: 'Rejected' },
-  { resource: 'Smart Class 4', date: 'Apr 19, 2026', time: '11:00 AM', status: 'Approved' },
-]
+const MotionDiv = motion.div
+const ALERT_ROTATION_INTERVAL_MS = 10 * 1000
+const ALERT_FETCH_INTERVAL_MS = 10 * 1000
 
 const recentTickets = [
   { title: 'Projector not working', category: 'IT Support', status: 'Open', time: '10 min ago' },
@@ -45,12 +30,41 @@ const recentTickets = [
   { title: 'Network access issue', category: 'ICT', status: 'Resolved', time: 'Yesterday' },
 ]
 
+const topActions = [
+  { label: 'Study Areas', to: '/study-areas', style: 'secondary' },
+  { label: 'Book a Resource', to: '/bookings', style: 'primary' },
+  { label: 'Report an Issue', to: '/incident-ticketing', style: 'secondary' },
+  { label: 'View Notifications', to: '#recent-tickets', style: 'ghost' },
+]
+
+const quickActions = [
+  {
+    title: 'Book a Resource',
+    description: 'Reserve rooms, labs, or equipment quickly.',
+    icon: CalendarCheck2,
+    to: '/bookings',
+    accent: 'from-green-600 to-green-700',
+  },
+  {
+    title: 'Report an Issue',
+    description: 'Create and track incident tickets with ease.',
+    icon: CircleAlert,
+    to: '/incident-ticketing',
+    accent: 'from-cyan-500 to-cyan-700',
+  },
+  {
+    title: 'Explore Study Areas',
+    description: 'Find spaces and check live occupancy hints.',
+    icon: BookOpen,
+    to: '/study-areas',
+    accent: 'from-emerald-500 to-emerald-700',
+  },
+]
+
 function StatusBadge({ status }) {
   const styles = {
-    Approved: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
-    Pending: 'bg-yellow-100 text-yellow-800 ring-yellow-200',
-    Rejected: 'bg-red-100 text-red-800 ring-red-200',
-    Open: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
+    Open: 'bg-emerald-100 text-emerald-700 ring-emerald-200',
+    Pending: 'bg-amber-100 text-amber-700 ring-amber-200',
     Resolved: 'bg-slate-100 text-slate-700 ring-slate-200',
   }
 
@@ -61,378 +75,458 @@ function StatusBadge({ status }) {
   )
 }
 
-function Sidebar() {
-  const location = useLocation()
+function TopActionButton({ action }) {
+  const classes = {
+    primary:
+      'bg-green-600 text-white shadow-lg shadow-green-200 hover:bg-green-700',
+    secondary:
+      'border border-green-200 bg-white text-green-800 hover:bg-green-50',
+    ghost:
+      'border border-green-100 bg-green-50 text-green-700 hover:bg-green-100',
+  }
 
-  const isActive = (href) => {
-    if (href.startsWith('/')) {
-      return location.pathname === href
-    }
+  const className = `inline-flex items-center rounded-[14px] px-4 py-2.5 text-sm font-bold transition ${classes[action.style]}`
 
-    if (href.startsWith('#')) {
-      return location.pathname === '/dashboard' && (location.hash === href || (href === '#dashboard' && !location.hash))
-    }
-
-    return false
+  if (action.to.startsWith('/')) {
+    return (
+      <Link to={action.to} className={className}>
+        {action.label}
+      </Link>
+    )
   }
 
   return (
-    <aside className="hidden xl:flex xl:w-72 xl:flex-col xl:border-r xl:border-slate-200 xl:bg-white/90 xl:backdrop-blur-md">
-      <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-6">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-200">
-          <Home className="h-6 w-6" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-emerald-700">Smart Campus</p>
-          <h1 className="text-lg font-extrabold text-emerald-900">Operations Hub</h1>
-        </div>
-      </div>
-
-      <nav className="flex-1 space-y-1 px-4 py-6">
-        {navigationItems.map((item) => {
-          const Icon = item.icon
-          const active = isActive(item.href)
-          return (
-            <a
-              key={item.label}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${active ? 'bg-emerald-100 text-emerald-800' : 'text-slate-600 hover:bg-slate-100 hover:text-emerald-700'}`}
-            >
-              <Icon className="h-5 w-5" />
-              {item.label}
-            </a>
-          )
-        })}
-      </nav>
-
-      <div className="border-t border-slate-200 px-6 py-6">
-        <div className="rounded-3xl bg-emerald-50 p-4">
-          <p className="text-sm font-semibold text-emerald-800">Campus status</p>
-          <p className="mt-1 text-xs leading-5 text-emerald-700/80">
-            All core services are operating normally. New booking slots open at 6 PM.
-          </p>
-        </div>
-      </div>
-    </aside>
-  )
-}
-
-function Navbar({ user, onLogout }) {
-  return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md">
-      <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3 xl:hidden">
-          <button className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-emerald-700 shadow-sm">
-            <Menu className="h-5 w-5" />
-          </button>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">Smart Campus</p>
-            <h1 className="text-lg font-extrabold text-emerald-900">Operations Hub</h1>
-          </div>
-        </div>
-
-        <div className="hidden xl:block">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-600">Smart Campus Operations Hub</p>
-          <h2 className="text-2xl font-extrabold text-emerald-900">Dashboard Home</h2>
-        </div>
-
-        <div className="flex flex-1 items-center justify-end gap-3">
-          <button className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm sm:flex">
-            <Search className="h-4 w-4 text-emerald-600" />
-            Search
-          </button>
-
-          <button className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-emerald-700 shadow-sm">
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
-
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">
-              {user?.name?.charAt(0)?.toUpperCase() || 'S'}
-            </div>
-            <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-emerald-900">{user?.name || 'Student User'}</p>
-              <p className="text-xs text-slate-500">{user?.email || 'smart.campus@my.sliit.lk'}</p>
-            </div>
-          </div>
-
-          <button
-            onClick={onLogout}
-            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
-        </div>
-      </div>
-    </header>
+    <a href={action.to} className={className}>
+      {action.label}
+    </a>
   )
 }
 
 function StatCard({ title, value, icon, change }) {
+  const Icon = icon
+
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+    <MotionDiv
+      whileHover={{ y: -4, scale: 1.01 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+      className="rounded-[24px] border border-green-100 bg-white p-5 shadow-sm"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-slate-500">{title}</p>
-          <p className="mt-2 text-3xl font-extrabold tracking-tight text-emerald-900">{value}</p>
-          <p className="mt-2 text-xs font-medium text-emerald-600">{change}</p>
+          <p className="mt-2 text-4xl font-black leading-none text-green-900">{value}</p>
+          <p className="mt-2 text-sm font-semibold text-green-600">{change}</p>
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-          {React.createElement(icon, { className: 'h-6 w-6' })}
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-green-100 text-green-700">
+          <Icon className="h-6 w-6" />
         </div>
       </div>
-    </div>
+    </MotionDiv>
   )
 }
 
-function QuickActionButton({ title, description, icon, accent = 'bg-green-600' }) {
+function QuickActionCard({ title, description, icon, to, accent }) {
+  const Icon = icon
+
   return (
-    <button className="group flex items-center gap-4 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white ${accent}`}>
-        {React.createElement(icon, { className: 'h-5 w-5' })}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-bold text-emerald-900">{title}</span>
-        <span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span>
-      </span>
-    </button>
+    <MotionDiv whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }}>
+      <Link
+        to={to}
+        className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white p-4 transition hover:border-green-200 hover:shadow-md"
+      >
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white ${accent}`}>
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-base font-bold text-green-900">{title}</span>
+          <span className="mt-1 block text-sm text-slate-500">{description}</span>
+        </span>
+        <ArrowRight className="ml-auto h-4 w-4 text-green-600" />
+      </Link>
+    </MotionDiv>
   )
 }
 
-export default function HomePage() {
+const UserDashboardPage = () => {
   const { user, logout } = useAuth()
-  const [showLocationPopup, setShowLocationPopup] = useState(() =>
-    typeof navigator !== 'undefined' && Boolean(navigator.geolocation),
-  )
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
+  const [stats, setStats] = useState({
+    totalBookings: 0,
+    pendingRequests: 0,
+    openTickets: 0,
+    approvedBookings: 0,
+    activeBookings: 0,
+    newTickets: 0,
+  })
+  const [campusAlerts, setCampusAlerts] = useState([])
+  const [currentAlertIndex, setCurrentAlertIndex] = useState(0)
 
-  const enableLocation = () => {
-    localStorage.setItem('studyAreaLocationPreference', 'enabled')
-    setShowLocationPopup(false)
+  const [isLocationEnabled, setIsLocationEnabled] = useState(() => {
+    return localStorage.getItem('studyAreaLocationPreference') === 'enabled'
+  })
+
+  const toggleLocation = () => {
+    const newState = !isLocationEnabled
+    if (newState) {
+      localStorage.setItem('studyAreaLocationPreference', 'enabled')
+    } else {
+      localStorage.removeItem('studyAreaLocationPreference')
+    }
+    setIsLocationEnabled(newState)
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      {showLocationPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">Location Access</p>
-            <h2 className="mt-2 text-xl font-extrabold text-emerald-900">Turn on location?</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Enable location services to improve study area availability and live occupancy updates.
-            </p>
+  useEffect(() => {
+    const loadDashboardStats = async () => {
+      const userId = user?.id || user?._id
+      if (!userId) {
+        return
+      }
 
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                onClick={() => setShowLocationPopup(false)}
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+      try {
+        const [bookings, tickets] = await Promise.all([
+          bookingService.getUserBookings(userId),
+          ticketApiService.getMyTickets(),
+        ])
+
+        const safeBookings = Array.isArray(bookings)
+          ? bookings
+          : Array.isArray(bookings?.data)
+            ? bookings.data
+            : []
+        const safeTickets = Array.isArray(tickets)
+          ? tickets
+          : Array.isArray(tickets?.data)
+            ? tickets.data
+            : []
+
+        const today = new Date()
+        const isSameDay = (dateValue) => {
+          if (!dateValue) {
+            return false
+          }
+
+          const date = new Date(dateValue)
+          if (Number.isNaN(date.getTime())) {
+            return false
+          }
+
+          return (
+            date.getFullYear() === today.getFullYear() &&
+            date.getMonth() === today.getMonth() &&
+            date.getDate() === today.getDate()
+          )
+        }
+
+        const activeBookingsCount = safeBookings.filter(
+          (b) => b.status === 'PENDING' || b.status === 'APPROVED'
+        ).length
+        const newTicketsCount = safeTickets.filter((t) => isSameDay(t.createdAt)).length
+
+        setStats({
+          totalBookings: safeBookings.length,
+          pendingRequests: safeBookings.filter((b) => b.status === 'PENDING').length,
+          openTickets: safeTickets.filter((t) => t.status === 'OPEN').length,
+          approvedBookings: safeBookings.filter((b) => b.status === 'APPROVED').length,
+          activeBookings: activeBookingsCount,
+          newTickets: newTicketsCount,
+        })
+      } catch (error) {
+        console.error('Failed to load dashboard stats:', error)
+      }
+    }
+
+    loadDashboardStats()
+  }, [user?.id, user?._id])
+
+  useEffect(() => {
+    const handleNotificationsUpdated = () => {
+      const userId = user?.id || user?._id
+      if (!userId) {
+        return
+      }
+
+      bookingService.getUserBookings(userId)
+        .then((bookings) => {
+          const safeBookings = Array.isArray(bookings)
+            ? bookings
+            : Array.isArray(bookings?.data)
+              ? bookings.data
+              : []
+
+          return ticketApiService.getMyTickets().then((tickets) => {
+            const safeTickets = Array.isArray(tickets)
+              ? tickets
+              : Array.isArray(tickets?.data)
+                ? tickets.data
+                : []
+
+            const today = new Date()
+            const isSameDay = (dateValue) => {
+              if (!dateValue) {
+                return false
+              }
+
+              const date = new Date(dateValue)
+              if (Number.isNaN(date.getTime())) {
+                return false
+              }
+
+              return (
+                date.getFullYear() === today.getFullYear() &&
+                date.getMonth() === today.getMonth() &&
+                date.getDate() === today.getDate()
+              )
+            }
+
+            const activeBookingsCount = safeBookings.filter(
+              (booking) => booking.status === 'PENDING' || booking.status === 'APPROVED'
+            ).length
+            const newTicketsCount = safeTickets.filter((ticket) => isSameDay(ticket.createdAt)).length
+
+            setStats({
+              totalBookings: safeBookings.length,
+              pendingRequests: safeBookings.filter((booking) => booking.status === 'PENDING').length,
+              openTickets: safeTickets.filter((ticket) => ticket.status === 'OPEN').length,
+              approvedBookings: safeBookings.filter((booking) => booking.status === 'APPROVED').length,
+              activeBookings: activeBookingsCount,
+              newTickets: newTicketsCount,
+            })
+          })
+        })
+        .catch((error) => {
+          console.error('Failed to refresh dashboard stats after notification:', error)
+        })
+    }
+
+    window.addEventListener('smartcampus-notifications-updated', handleNotificationsUpdated)
+
+    return () => window.removeEventListener('smartcampus-notifications-updated', handleNotificationsUpdated)
+  }, [user?.id, user?._id])
+
+  useEffect(() => {
+    const loadCampusAlerts = async () => {
+      try {
+        const data = await getActiveCampusAlerts()
+        const safeAlerts = Array.isArray(data) ? data : []
+        setCampusAlerts(safeAlerts)
+        setCurrentAlertIndex((prev) => (safeAlerts.length > 0 ? prev % safeAlerts.length : 0))
+      } catch (error) {
+        console.error('Failed to load campus alerts:', error)
+        setCampusAlerts([])
+        setCurrentAlertIndex(0)
+      }
+    }
+
+    loadCampusAlerts()
+    const fetchIntervalId = window.setInterval(loadCampusAlerts, ALERT_FETCH_INTERVAL_MS)
+
+    return () => window.clearInterval(fetchIntervalId)
+  }, [])
+
+  useEffect(() => {
+    if (campusAlerts.length <= 1) {
+      return undefined
+    }
+
+    const rotateIntervalId = window.setInterval(() => {
+      setCurrentAlertIndex((prev) => (prev + 1) % campusAlerts.length)
+    }, ALERT_ROTATION_INTERVAL_MS)
+
+    return () => window.clearInterval(rotateIntervalId)
+  }, [campusAlerts.length])
+
+  const currentCampusAlertMessage = campusAlerts[currentAlertIndex]?.message || ''
+
+  const statCards = [
+    { title: 'Total Bookings', value: String(stats.totalBookings), icon: CalendarCheck2, change: '+12% this month' },
+    { title: 'Pending Requests', value: String(stats.pendingRequests), icon: ClipboardList, change: '3 awaiting approval' },
+    { title: 'Open Tickets', value: String(stats.openTickets), icon: MessageSquareWarning, change: '2 urgent' },
+    { title: 'Approved Bookings', value: String(stats.approvedBookings), icon: Bell, change: '+18 this week' },
+  ]
+
+  return (
+    <div className="min-h-screen bg-[radial-gradient(1000px_600px_at_10%_-10%,#dcfce7_0%,#f8fafc_42%,#f0fdf4_100%)] text-slate-900">
+
+      <PortalHeader
+        user={user}
+        onLogout={logout}
+        isLocationEnabled={isLocationEnabled}
+        onToggleLocation={toggleLocation}
+        isNotificationOpen={isNotificationOpen}
+        setIsNotificationOpen={setIsNotificationOpen}
+      />
+
+      <main className="mx-auto grid w-full max-w-[1320px] gap-4 px-4 py-5 sm:px-6">
+        <section className="rounded-[24px] border border-green-100 bg-gradient-to-br from-white to-green-50 p-6 shadow-sm md:p-7">
+          <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
+            <div>
+              <p className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-black uppercase tracking-[0.15em] text-green-700">
+                Welcome Back
+              </p>
+              <h2 className="mt-4 text-4xl font-black tracking-tight text-green-900">
+                Good to see you, {user?.name || 'Naveen'}.
+              </h2>
+              <p className="mt-3 max-w-2xl text-lg text-slate-600">
+                Manage bookings, resources, support tickets, and notifications from a single, streamlined dashboard.
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                {topActions.map((action) => (
+                  <TopActionButton key={action.label} action={action} />
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              <MotionDiv
+                whileHover={{ y: -3 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 20 }}
+                className="rounded-[24px] bg-gradient-to-br from-green-700 to-green-800 p-6 text-white shadow-xl shadow-green-200"
               >
-                Not now
-              </button>
-              <button
-                onClick={enableLocation}
-                className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+                <p className="text-lg font-bold">Today's Overview</p>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-5xl font-black leading-none">{stats.activeBookings}</p>
+                    <p className="mt-2 text-base text-green-100">Active bookings</p>
+                  </div>
+                  <div>
+                    <p className="text-5xl font-black leading-none">{stats.newTickets}</p>
+                    <p className="mt-2 text-base text-green-100">New tickets</p>
+                  </div>
+                </div>
+              </MotionDiv>
+
+              <MotionDiv
+                whileHover={{ y: -2 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+                className="campus-alert-card rounded-[24px] border border-green-100 bg-white p-6"
               >
-                Enable Location
-              </button>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 text-green-900">
+                    <span className="campus-alert-icon-wrap">
+                      <AlertTriangle className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <p className="text-2xl font-extrabold">Campus Alert</p>
+                      <p className="text-sm font-semibold text-emerald-700">Updates every 10 seconds</p>
+                    </div>
+                  </div>
+                  {campusAlerts.length > 1 && (
+                    <span className="campus-alert-pill">
+                      {currentAlertIndex + 1} / {campusAlerts.length}
+                    </span>
+                  )}
+                </div>
+                {currentCampusAlertMessage ? (
+                  <MotionDiv
+                    key={`${currentAlertIndex}-${currentCampusAlertMessage}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                    className="campus-alert-message mt-4"
+                  >
+                    <p className="text-lg text-slate-700">{currentCampusAlertMessage}</p>
+                  </MotionDiv>
+                ) : (
+                  <p className="mt-4 rounded-2xl border border-dashed border-emerald-200 bg-white/80 px-4 py-3 text-lg text-slate-500">
+                    No active campus alerts right now.
+                  </p>
+                )}
+
+                {campusAlerts.length > 1 && (
+                  <div className="mt-4 flex items-center gap-2">
+                    {campusAlerts.map((_, index) => (
+                      <span
+                        key={`alert-dot-${index}`}
+                        className={`campus-alert-dot ${index === currentAlertIndex ? 'is-active' : ''}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {currentCampusAlertMessage && (
+                  <div className="campus-alert-progress mt-4">
+                    <span key={`progress-${currentAlertIndex}`} className="campus-alert-progress-bar" />
+                  </div>
+                )}
+              </MotionDiv>
             </div>
           </div>
-        </div>
-      )}
+        </section>
 
-      <div className="flex min-h-screen">
-        <Sidebar />
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {statCards.map((card) => (
+            <StatCard key={card.title} {...card} />
+          ))}
+        </section>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Navbar user={user} onLogout={logout} />
-
-          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-white to-emerald-50 p-6 shadow-sm sm:p-8">
-              <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr] lg:items-center">
-                <div>
-                  <p className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">
-                    Welcome back
-                  </p>
-                  <h2 className="mt-4 text-3xl font-black tracking-tight text-emerald-900 sm:text-4xl">
-                    Good to see you, {user?.name || 'Student'}.
-                  </h2>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-                    Manage bookings, resources, support tickets, and notifications from a single campus operations dashboard.
-                  </p>
-
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <a href="#bookings" className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700">
-                      Book a Resource
-                    </a>
-                    <a href="#tickets" className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-slate-100">
-                      Report an Issue
-                    </a>
-                    <a href="#notifications" className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-slate-100">
-                      View Notifications
-                    </a>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                  <div className="rounded-3xl bg-emerald-600 p-5 text-white shadow-xl shadow-emerald-200">
-                    <p className="text-sm font-medium text-emerald-100">Today&apos;s overview</p>
-                    <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-2xl font-black">24</p>
-                        <p className="text-emerald-100/90">Active bookings</p>
-                      </div>
-                      <div>
-                        <p className="text-2xl font-black">6</p>
-                        <p className="text-emerald-100/90">New tickets</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <p className="text-sm font-semibold text-emerald-900">Campus alert</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Auditorium A is fully booked until 4 PM. Consider Computer Lab A or Meeting Room 2.
-                    </p>
-                  </div>
-                </div>
+        <section className="grid gap-4 xl:grid-cols-[1.35fr_0.9fr]">
+          <div className="rounded-[24px] border border-green-100 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-4xl font-black tracking-tight text-green-900">Quick Actions</h3>
+                <p className="mt-1 text-lg text-slate-500">Fast access to common campus workflows.</p>
               </div>
-            </section>
+            </div>
 
-            <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {statCards.map((card) => (
-                <StatCard key={card.title} {...card} />
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {quickActions.map((action) => (
+                <QuickActionCard key={action.title} {...action} />
               ))}
-            </section>
+            </div>
 
-            <section className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-              <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm" id="dashboard">
-                <div className="flex items-center justify-between gap-4">
+            <div className="mt-6 rounded-[24px] border border-green-100 bg-[linear-gradient(160deg,#f8fffa_0%,#effcf4_100%)] p-5">
+              <div className="venn-container">
+                <MotionDiv whileHover={{ scale: 1.04 }} className="venn-circle venn-circle-resource">
+                  <CalendarCheck2 className="mb-1 h-5 w-5" />
+                  <span>Resources & Bookings</span>
+                </MotionDiv>
+                <MotionDiv whileHover={{ scale: 1.04 }} className="venn-circle venn-circle-support">
+                  <Wrench className="mb-1 h-5 w-5" />
+                  <span>Support & Issues</span>
+                </MotionDiv>
+                <MotionDiv whileHover={{ scale: 1.04 }} className="venn-circle venn-circle-study">
+                  <BookOpen className="mb-1 h-5 w-5" />
+                  <span>Study & Learning</span>
+                </MotionDiv>
+
+                <MotionDiv whileHover={{ scale: 1.06 }} className="venn-center">
+                  <CircleCheckBig className="h-5 w-5" />
+                  <span>Operations Hub</span>
+                </MotionDiv>
+              </div>
+            </div>
+          </div>
+
+          <div id="recent-tickets" className="rounded-[24px] border border-green-100 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-4xl font-black tracking-tight text-green-900">Recent Tickets</h3>
+                <p className="mt-1 text-lg text-slate-500">Latest updates from your reported issues.</p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {recentTickets.map((ticket) => (
+                <MotionDiv
+                  key={`${ticket.title}-${ticket.time}`}
+                  whileHover={{ y: -2 }}
+                  transition={{ type: 'spring', stiffness: 280, damping: 20 }}
+                  className="flex items-center justify-between gap-3 rounded-[18px] border border-green-100 bg-slate-50 px-4 py-3"
+                >
                   <div>
-                    <h3 className="text-xl font-extrabold text-emerald-900">Quick Actions</h3>
-                    <p className="mt-1 text-sm text-slate-500">Fast access to common campus workflows.</p>
+                    <p className="text-xl font-extrabold text-green-900">{ticket.title}</p>
+                    <p className="mt-1 text-base text-slate-500">{ticket.category} • {ticket.time}</p>
                   </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
-                  <QuickActionButton
-                    title="Book a Resource"
-                    description="Reserve rooms, labs, or equipment in seconds."
-                    icon={CalendarCheck2}
-                    accent="bg-emerald-600"
-                  />
-                  <QuickActionButton
-                    title="Report an Issue"
-                    description="Log facility or IT issues for quick follow-up."
-                    icon={CircleAlert}
-                    accent="bg-cyan-500"
-                  />
-                  <QuickActionButton
-                    title="View Notifications"
-                    description="Check approvals, updates, and reminders."
-                    icon={Bell}
-                    accent="bg-slate-700"
-                  />
-                </div>
-
-                <div className="mt-8 grid gap-6 lg:grid-cols-2">
-                  <div id="bookings">
-                    <div className="mb-4 flex items-center justify-between">
-                      <h4 className="text-lg font-bold text-emerald-900">Recent Bookings</h4>
-                      <a href="#" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">
-                        View all
-                      </a>
-                    </div>
-
-                    <div className="overflow-hidden rounded-3xl border border-slate-200">
-                      <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                        <thead className="bg-slate-50/80">
-                          <tr>
-                            <th className="px-4 py-3 font-semibold text-emerald-900">Resource</th>
-                            <th className="px-4 py-3 font-semibold text-emerald-900">Date</th>
-                            <th className="px-4 py-3 font-semibold text-emerald-900">Time</th>
-                            <th className="px-4 py-3 font-semibold text-emerald-900">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {recentBookings.map((booking) => (
-                            <tr key={`${booking.resource}-${booking.date}`}>
-                              <td className="px-4 py-4 font-semibold text-slate-700">{booking.resource}</td>
-                              <td className="px-4 py-4 text-slate-500">{booking.date}</td>
-                              <td className="px-4 py-4 text-slate-500">{booking.time}</td>
-                              <td className="px-4 py-4">
-                                <StatusBadge status={booking.status} />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <div id="tickets">
-                    <div className="mb-4 flex items-center justify-between">
-                      <h4 className="text-lg font-bold text-emerald-900">Recent Tickets</h4>
-                      <a href="#" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">
-                        Open queue
-                      </a>
-                    </div>
-
-                    <div className="space-y-3">
-                      {recentTickets.map((ticket) => (
-                        <div key={ticket.title} className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="font-bold text-emerald-900">{ticket.title}</p>
-                              <p className="mt-1 text-sm text-slate-500">{ticket.category}</p>
-                            </div>
-                            <StatusBadge status={ticket.status} />
-                          </div>
-                          <p className="mt-3 text-xs font-medium text-slate-500">Updated {ticket.time}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6" id="notifications">
-                <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                  <h4 className="text-lg font-bold text-emerald-900">Notifications</h4>
-                  <div className="mt-4 space-y-3">
-                    <div className="rounded-2xl bg-emerald-50 p-4">
-                      <p className="text-sm font-semibold text-emerald-900">Booking approved</p>
-                      <p className="mt-1 text-xs text-slate-600">Your Computer Lab A booking was approved.</p>
-                    </div>
-                    <div className="rounded-2xl bg-yellow-50 p-4">
-                      <p className="text-sm font-semibold text-yellow-900">Pending review</p>
-                      <p className="mt-1 text-xs text-slate-600">Meeting Room 2 request is waiting for staff approval.</p>
-                    </div>
-                    <div className="rounded-2xl bg-red-50 p-4">
-                      <p className="text-sm font-semibold text-red-900">Issue escalated</p>
-                      <p className="mt-1 text-xs text-slate-600">Network issue has been forwarded to ICT support.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm" id="profile">
-                  <h4 className="text-lg font-bold text-emerald-900">Profile Summary</h4>
-                  <div className="mt-4 flex items-center gap-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 text-xl font-black text-white">
-                      {user?.name?.charAt(0)?.toUpperCase() || 'S'}
-                    </div>
-                    <div>
-                      <p className="font-bold text-emerald-900">{user?.name || 'Student User'}</p>
-                      <p className="text-sm text-slate-500">{user?.email || 'smart.campus@my.sliit.lk'}</p>
-                      <p className="mt-1 text-sm font-medium text-emerald-600">Role: {user?.role || 'USER'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </main>
-        </div>
-      </div>
+                  <StatusBadge status={ticket.status} />
+                </MotionDiv>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   )
 }
+
+export default UserDashboardPage

@@ -11,28 +11,36 @@ import java.time.Instant;
 public class Notification {
     @Id
     private String id;
-    
+
     @Indexed
     private String userId;
-    
+
+    private String title;
+
     private NotificationType type;
-    
+
     private String message;
-    
+
     private NotificationStatus status;
-    
+
+    private String relatedBookingId;
+
     @CreatedDate
     private Instant createdAt;
 
     // Constructors
-    public Notification() {}
+    public Notification() {
+    }
 
-    public Notification(String id, String userId, NotificationType type, String message, NotificationStatus status, Instant createdAt) {
+    public Notification(String id, String userId, String title, NotificationType type, String message,
+            NotificationStatus status, String relatedBookingId, Instant createdAt) {
         this.id = id;
         this.userId = userId;
+        this.title = title;
         this.type = type;
         this.message = message;
         this.status = status;
+        this.relatedBookingId = relatedBookingId;
         this.createdAt = createdAt;
     }
 
@@ -51,6 +59,14 @@ public class Notification {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public NotificationType getType() {
@@ -75,6 +91,22 @@ public class Notification {
 
     public void setStatus(NotificationStatus status) {
         this.status = status;
+    }
+
+    public Boolean getIsRead() {
+        return status == NotificationStatus.READ;
+    }
+
+    public void setIsRead(Boolean isRead) {
+        this.status = Boolean.TRUE.equals(isRead) ? NotificationStatus.READ : NotificationStatus.UNREAD;
+    }
+
+    public String getRelatedBookingId() {
+        return relatedBookingId;
+    }
+
+    public void setRelatedBookingId(String relatedBookingId) {
+        this.relatedBookingId = relatedBookingId;
     }
 
     public Instant getCreatedAt() {
