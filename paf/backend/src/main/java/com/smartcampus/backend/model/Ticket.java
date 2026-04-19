@@ -39,4 +39,10 @@ public class Ticket {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime resolvedAt;
+    
+    // SLA-related fields for Member 3 novelty feature
+    private LocalDateTime slaDeadline;           // Auto-calculated deadline based on priority
+    private EscalationLevel escalationLevel;    // Current escalation status (NORMAL, WARNING, CRITICAL, OVERDUE)
+    private Boolean isOverdue;                  // Tracks if SLA deadline has been exceeded
+    private Boolean resolvedWithinSla;          // Records if ticket was resolved before deadline
 }

@@ -5,7 +5,6 @@ import {
   Bell,
   Building2,
   CalendarCheck2,
-  ClipboardList,
   Eye,
   LayoutDashboard,
   LogOut,
@@ -17,11 +16,16 @@ import {
   Ticket,
   Trash2,
   UserRound,
+  Users,
   X,
   Wrench,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import 'leaflet/dist/leaflet.css';
+import {
+  getStudyAreaActiveMembers,
+  getStudyAreaOccupancy,
+} from '../facilities/services/facilitiesService';
 import {
   createBuilding,
   createResource,
@@ -36,23 +40,28 @@ import {
 const sidebarItems = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard' },
   { label: 'Resources', icon: Building2, to: '/admin/resources', active: true },
+  { label: 'Campus Alerts', icon: Bell, to: '/admin/alerts' },
   { label: 'Manage Technicians', icon: Wrench, to: '/admin/technicians' },
   { label: 'Manage Bookings', icon: CalendarCheck2, to: '/admin/bookings' },
   { label: 'Manage Tickets', icon: Ticket, to: '/admin/tickets' },
-  { label: 'Reports', icon: ClipboardList, to: '/admin/reports' },
   { label: 'Profile', icon: UserRound, to: '/profile' },
 ];
 
 const RESOURCE_TYPES = [
   { value: 'LECTURE_HALL', label: 'Lecture Hall' },
+  { value: 'LAB', label: 'Lab' },
+  { value: 'MEETING_ROOM', label: 'Meeting Room' },
   { value: 'STUDY_AREA', label: 'Study Area' },
 ];
 
 const RESOURCE_STATUSES = [
-  { value: 'AVAILABLE', label: 'Available' },
-  { value: 'UNAVAILABLE', label: 'Unavailable' },
-  { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
+  { value: 'AVAILABLE', label: 'ACTIVE' },
+  { value: 'UNAVAILABLE', label: 'OUT_OF_SERVICE' },
+  { value: 'UNDER_MAINTENANCE', label: 'UNDER_MAINTENANCE' },
 ];
+
+const resourceTypeLabelMap = Object.fromEntries(RESOURCE_TYPES.map((item) => [item.value, item.label]));
+const resourceStatusLabelMap = Object.fromEntries(RESOURCE_STATUSES.map((item) => [item.value, item.label]));
 
 const buildingRowTemplate = (index = 0) => ({
   blockName: String.fromCharCode(65 + index),
@@ -78,7 +87,12 @@ const emptyResourceForm = () => ({
   latitude: '',
   longitude: '',
   mapRadiusMeters: 50,
+  projectorCount: 0,
+  cameraCount: 0,
+  pcCount: 0,
 });
+
+const normalizeSearchValue = (value) => `${value ?? ''}`.trim().toLowerCase();
 
 const statusStyles = {
   AVAILABLE: 'bg-green-100 text-green-800 ring-green-200',
@@ -89,7 +103,7 @@ const statusStyles = {
 function Badge({ value }) {
   return (
     <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyles[value] || statusStyles.UNAVAILABLE}`}>
-      {value.replaceAll('_', ' ')}
+      {resourceStatusLabelMap[value] || value.replaceAll('_', ' ')}
     </span>
   );
 }
@@ -168,7 +182,7 @@ function TopNavbar({ onLogout, user }) {
           </button>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-800">Smart Campus Admin</p>
-            <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Resources Management</h2>
+            <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Resources Catalogue</h2>
           </div>
         </div>
 
@@ -291,6 +305,8 @@ const AdminResourcesPage = () => {
   const [buildings, setBuildings] = useState([]);
   const [resources, setResources] = useState([]);
   const [studyAreaResources, setStudyAreaResources] = useState([]);
+  const [studyAreaOccupancy, setStudyAreaOccupancy] = useState({});
+  const [studyAreaActiveMembers, setStudyAreaActiveMembers] = useState({});
   const [loadingBuildings, setLoadingBuildings] = useState(false);
   const [loadingResources, setLoadingResources] = useState(false);
   const [loadingStudyAreas, setLoadingStudyAreas] = useState(false);
@@ -308,7 +324,7 @@ const AdminResourcesPage = () => {
   const [resourceErrors, setResourceErrors] = useState({});
   const [editingBuildingId, setEditingBuildingId] = useState(null);
   const [editingResourceId, setEditingResourceId] = useState(null);
-  const [resourceFilters, setResourceFilters] = useState({ search: '', resourceType: '', buildingId: '', status: '' });
+  const [resourceFilters, setResourceFilters] = useState({ search: '', resourceType: '', buildingId: '', status: '', location: '', capacityMin: '' });
   const [locating, setLocating] = useState(false);
   const blockNameRefs = useRef([]);
   const floorCountRefs = useRef([]);
@@ -337,6 +353,67 @@ const AdminResourcesPage = () => {
     () => studyAreaResources.filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))),
     [studyAreaResources],
   );
+
+  const visibleResources = useMemo(() => {
+    const search = normalizeSearchValue(resourceFilters.search);
+    const location = normalizeSearchValue(resourceFilters.location);
+    const minCapacity = resourceFilters.capacityMin === '' ? null : Number(resourceFilters.capacityMin);
+
+    return resources.filter((resource) => {
+      const matchesSearch = !search || [
+        resource.hallName,
+        resource.buildingName,
+        resource.blockName,
+        resource.description,
+        resource.resourceType,
+        resource.status,
+        resource.projectorCount,
+        resource.cameraCount,
+        resource.pcCount,
+      ].some((field) => normalizeSearchValue(field).includes(search));
+
+      const matchesLocation = !location || [resource.buildingName, resource.blockName, resource.hallName, resource.description].some((field) => normalizeSearchValue(field).includes(location));
+      const matchesCapacity = minCapacity === null || Number(resource.capacity) >= minCapacity;
+
+      return matchesSearch && matchesLocation && matchesCapacity;
+    });
+  }, [resourceFilters.capacityMin, resourceFilters.location, resourceFilters.search, resources]);
+
+  const getOccupancyState = (activeCount, capacity) => {
+    const normalizedCapacity = Number(capacity) || 0;
+
+    if (normalizedCapacity <= 0) {
+      return {
+        label: 'Normal',
+        badgeClass: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
+        cardClass: 'border-emerald-200 bg-emerald-50/40',
+      };
+    }
+
+    const percentage = (Number(activeCount) / normalizedCapacity) * 100;
+
+    if (percentage < 50) {
+      return {
+        label: 'Normal',
+        badgeClass: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
+        cardClass: 'border-emerald-200 bg-emerald-50/40',
+      };
+    }
+
+    if (percentage <= 90) {
+      return {
+        label: 'Busy',
+        badgeClass: 'bg-amber-100 text-amber-800 ring-amber-200',
+        cardClass: 'border-amber-200 bg-amber-50/50',
+      };
+    }
+
+    return {
+      label: 'Crowded',
+      badgeClass: 'bg-rose-100 text-rose-800 ring-rose-200',
+      cardClass: 'border-rose-200 bg-rose-50/50',
+    };
+  };
 
   const showToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -386,8 +463,25 @@ const AdminResourcesPage = () => {
   const loadStudyAreas = useCallback(async () => {
     try {
       setLoadingStudyAreas(true);
-      const data = await getResources({ resourceType: 'STUDY_AREA' });
-      setStudyAreaResources(Array.isArray(data) ? data : []);
+      const [resourceData, occupancyData, activeMembersData] = await Promise.all([
+        getResources({ resourceType: 'STUDY_AREA' }),
+        getStudyAreaOccupancy(),
+        getStudyAreaActiveMembers(),
+      ]);
+
+      setStudyAreaResources(Array.isArray(resourceData) ? resourceData : []);
+
+      const nextOccupancy = {};
+      (Array.isArray(occupancyData) ? occupancyData : []).forEach((item) => {
+        nextOccupancy[item.studyAreaId] = item.activeUserCount;
+      });
+      setStudyAreaOccupancy(nextOccupancy);
+
+      const nextActiveMembers = {};
+      (Array.isArray(activeMembersData) ? activeMembersData : []).forEach((item) => {
+        nextActiveMembers[item.studyAreaId] = Array.isArray(item.activeMembers) ? item.activeMembers : [];
+      });
+      setStudyAreaActiveMembers(nextActiveMembers);
     } catch (fetchError) {
       setError(fetchError.response?.data?.message || 'Failed to load study areas');
     } finally {
@@ -407,6 +501,14 @@ const AdminResourcesPage = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, [loadResources, resourceFilters]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      loadStudyAreas();
+    }, 20 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadStudyAreas]);
 
   useEffect(() => {
     if (!resourceForm.buildingId || !selectedBuilding) {
@@ -501,6 +603,16 @@ const AdminResourcesPage = () => {
       nextErrors.capacity = 'Capacity must be greater than 0';
     }
 
+    if (!Number.isInteger(Number(resourceForm.projectorCount)) || Number(resourceForm.projectorCount) < 0) {
+      nextErrors.projectorCount = 'Projector count must be 0 or more';
+    }
+    if (!Number.isInteger(Number(resourceForm.cameraCount)) || Number(resourceForm.cameraCount) < 0) {
+      nextErrors.cameraCount = 'Camera count must be 0 or more';
+    }
+    if (!Number.isInteger(Number(resourceForm.pcCount)) || Number(resourceForm.pcCount) < 0) {
+      nextErrors.pcCount = 'PC count must be 0 or more';
+    }
+
     if (resourceForm.resourceType === 'STUDY_AREA') {
       const lat = Number(resourceForm.latitude);
       const lng = Number(resourceForm.longitude);
@@ -563,6 +675,9 @@ const AdminResourcesPage = () => {
         latitude: resource.latitude ?? '',
         longitude: resource.longitude ?? '',
         mapRadiusMeters: resource.mapRadiusMeters ?? 50,
+        projectorCount: resource.projectorCount ?? 0,
+        cameraCount: resource.cameraCount ?? 0,
+        pcCount: resource.pcCount ?? 0,
       });
     } else {
       setEditingResourceId(null);
@@ -661,6 +776,9 @@ const AdminResourcesPage = () => {
         latitude: resourceForm.resourceType === 'STUDY_AREA' ? Number(resourceForm.latitude) : null,
         longitude: resourceForm.resourceType === 'STUDY_AREA' ? Number(resourceForm.longitude) : null,
         mapRadiusMeters: resourceForm.resourceType === 'STUDY_AREA' ? Number(resourceForm.mapRadiusMeters) : null,
+        projectorCount: Number(resourceForm.projectorCount) || 0,
+        cameraCount: Number(resourceForm.cameraCount) || 0,
+        pcCount: Number(resourceForm.pcCount) || 0,
       };
 
       if (editingResourceId) {
@@ -686,7 +804,53 @@ const AdminResourcesPage = () => {
   };
 
   const useCurrentLocation = () => {
-    showToast('success', 'Location popup shown', 'Use map click or manual latitude/longitude entry. Browser location popup is disabled on this page.');
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      showToast('error', 'Location unavailable', 'This browser does not support geolocation. Use map click or manual latitude/longitude entry.');
+      return;
+    }
+
+    setLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = Number(position.coords.latitude.toFixed(6));
+        const longitude = Number(position.coords.longitude.toFixed(6));
+
+        setResourceForm((prev) => ({
+          ...prev,
+          latitude,
+          longitude,
+        }));
+
+        setResourceErrors((prev) => ({
+          ...prev,
+          latitude: undefined,
+          longitude: undefined,
+        }));
+
+        setLocating(false);
+        showToast('success', 'Location detected', 'Latitude and longitude were filled using your current location.');
+      },
+      (geoError) => {
+        let message = 'Unable to detect your location. Use map click or manual latitude/longitude entry.';
+
+        if (geoError?.code === 1) {
+          message = 'Location permission denied. Allow browser location access and try again.';
+        } else if (geoError?.code === 2) {
+          message = 'Location position unavailable. Please try again in a moment.';
+        } else if (geoError?.code === 3) {
+          message = 'Location request timed out. Please try again.';
+        }
+
+        setLocating(false);
+        showToast('error', 'Location failed', message);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000,
+      },
+    );
   };
 
   const handleDeleteBuilding = async () => {
@@ -740,7 +904,7 @@ const AdminResourcesPage = () => {
             <section className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Resources Management</h1>
+                  <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Resources Catalogue</h1>
                   <p className="mt-2 text-sm text-slate-600">
                     Manage campus buildings first, then create resources under each building.
                   </p>
@@ -756,7 +920,7 @@ const AdminResourcesPage = () => {
                     <p className="mt-2 text-2xl font-black text-slate-900">{stats.resourceCount}</p>
                   </div>
                   <div className="rounded-2xl bg-green-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Available</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Active</p>
                     <p className="mt-2 text-2xl font-black text-slate-900">{stats.availableCount}</p>
                   </div>
                   <div className="rounded-2xl bg-green-50 p-4">
@@ -882,8 +1046,8 @@ const AdminResourcesPage = () => {
                   <div className="space-y-6">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                       <div>
-                        <h2 className="text-lg font-bold text-slate-900">Resources Management</h2>
-                        <p className="mt-1 text-sm text-slate-500">Create and manage hall-based resources under existing buildings.</p>
+                        <h2 className="text-lg font-bold text-slate-900">Resources Catalogue</h2>
+                        <p className="mt-1 text-sm text-slate-500">Create and manage bookable resources, then search and filter by type, capacity, and location.</p>
                       </div>
                       <button
                         type="button"
@@ -898,14 +1062,14 @@ const AdminResourcesPage = () => {
 
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <label className="block">
-                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Search Hall Name</span>
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Search Resources</span>
                         <div className="relative">
                           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                           <input
                             value={resourceFilters.search}
                             onChange={(event) => setResourceFilters((prev) => ({ ...prev, search: event.target.value }))}
                             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-green-500"
-                            placeholder="Search hall name"
+                            placeholder="Search name, building, block, or description"
                           />
                         </div>
                       </label>
@@ -940,6 +1104,26 @@ const AdminResourcesPage = () => {
                         </select>
                       </label>
                       <label className="block">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Location</span>
+                        <input
+                          value={resourceFilters.location}
+                          onChange={(event) => setResourceFilters((prev) => ({ ...prev, location: event.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                          placeholder="Building, block, or room"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Min Capacity</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={resourceFilters.capacityMin}
+                          onChange={(event) => setResourceFilters((prev) => ({ ...prev, capacityMin: event.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                          placeholder="Any"
+                        />
+                      </label>
+                      <label className="block">
                         <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Status</span>
                         <select
                           value={resourceFilters.status}
@@ -963,27 +1147,33 @@ const AdminResourcesPage = () => {
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                           <thead className="bg-slate-50">
                             <tr>
-                              <th className="px-4 py-3 font-semibold text-slate-900">Hall Name</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Resource Name</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Resource Type</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Building</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Block</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Floor</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Hall Number</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Capacity</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Equipment</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Status</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 bg-white">
-                            {resources.map((resource) => (
+                            {visibleResources.map((resource) => (
                               <tr key={resource.id} className="align-top">
                                 <td className="px-4 py-4 font-semibold text-slate-800">{resource.hallName}</td>
-                                <td className="px-4 py-4 text-slate-600">{RESOURCE_TYPES.find((item) => item.value === resource.resourceType)?.label || resource.resourceType}</td>
+                                <td className="px-4 py-4 text-slate-600">{resourceTypeLabelMap[resource.resourceType] || resource.resourceType}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.buildingName}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.blockName}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.floorNumber}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.hallNumber}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.capacity}</td>
+                                <td className="px-4 py-4 text-slate-600">
+                                  {resource.resourceType === 'STUDY_AREA'
+                                    ? '-'
+                                    : `Projectors: ${resource.projectorCount || 0}, Cameras: ${resource.cameraCount || 0}, PCs: ${resource.pcCount || 0}`}
+                                </td>
                                 <td className="px-4 py-4">
                                   <Badge value={resource.status} />
                                 </td>
@@ -1016,9 +1206,9 @@ const AdminResourcesPage = () => {
                                 </td>
                               </tr>
                             ))}
-                            {resources.length === 0 && (
+                            {visibleResources.length === 0 && (
                               <tr>
-                                <td className="px-4 py-16 text-center text-slate-500" colSpan="9">
+                                <td className="px-4 py-16 text-center text-slate-500" colSpan="10">
                                   No resources found for the current filters.
                                 </td>
                               </tr>
@@ -1061,20 +1251,39 @@ const AdminResourcesPage = () => {
                           {mappedStudyAreas.map((area) => {
                             const center = [Number(area.latitude), Number(area.longitude)];
                             const radius = Number(area.mapRadiusMeters) || 50;
+                            const activeCount = studyAreaOccupancy[area.id] || 0;
+                            const activeMembers = studyAreaActiveMembers[area.id] || [];
+                            const occupancyState = getOccupancyState(activeCount, area.capacity);
 
                             return (
-                              <article key={area.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                              <article key={area.id} className={`rounded-2xl border p-4 shadow-sm ${occupancyState.cardClass}`}>
                                 <div className="flex items-start justify-between gap-3">
                                   <h3 className="inline-flex items-center gap-2 text-base font-bold text-slate-900">
                                     <MapPin className="h-4 w-4 text-green-700" />
                                     {area.hallName}
                                   </h3>
-                                  <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+                                  <div className="flex flex-col items-end gap-2">
+                                    <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
                                     {radius} m
-                                  </span>
+                                    </span>
+                                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${occupancyState.badgeClass}`}>
+                                      {occupancyState.label}
+                                    </span>
+                                  </div>
                                 </div>
 
                                 <p className="mt-2 text-sm text-slate-600">Building: {area.buildingName || '-'}</p>
+                                <p className="mt-1 text-sm text-slate-600">Capacity: {area.capacity || 0}</p>
+
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-800">
+                                    <Users className="h-3.5 w-3.5" />
+                                    {activeCount} active
+                                  </span>
+                                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                    {activeMembers.length} member(s)
+                                  </span>
+                                </div>
 
                                 <div className="mt-3 h-44 overflow-hidden rounded-xl border border-slate-200">
                                   <MapContainer center={center} zoom={17} className="h-full w-full" scrollWheelZoom={false} dragging={false} doubleClickZoom={false} zoomControl={false} attributionControl={false}>
@@ -1249,7 +1458,7 @@ const AdminResourcesPage = () => {
       {resourceModalOpen && (
         <ModalShell
           title={editingResourceId ? 'Edit Resource' : 'Add Resource'}
-          subtitle="Hall name is generated automatically from block, floor, and hall number."
+          subtitle="Hall name is generated automatically from block, floor, and hall number. Add projector, camera, and PC counts for hall resources."
           onClose={() => setResourceModalOpen(false)}
           footer={
             <div className="flex justify-end gap-3">
@@ -1275,6 +1484,9 @@ const AdminResourcesPage = () => {
                     latitude: nextType === 'STUDY_AREA' ? prev.latitude : '',
                     longitude: nextType === 'STUDY_AREA' ? prev.longitude : '',
                     mapRadiusMeters: nextType === 'STUDY_AREA' ? (prev.mapRadiusMeters || 50) : 50,
+                    projectorCount: nextType === 'STUDY_AREA' ? 0 : prev.projectorCount,
+                    cameraCount: nextType === 'STUDY_AREA' ? 0 : prev.cameraCount,
+                    pcCount: nextType === 'STUDY_AREA' ? 0 : prev.pcCount,
                   }));
                 }}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
@@ -1395,6 +1607,54 @@ const AdminResourcesPage = () => {
               />
               {resourceErrors.capacity && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.capacity}</p>}
             </label>
+
+            {resourceForm.resourceType !== 'STUDY_AREA' && (
+              <div className="md:col-span-2 rounded-2xl border border-green-100 bg-green-50/40 p-4">
+                <p className="text-sm font-semibold text-slate-900">Equipment in Hall</p>
+                <p className="mt-1 text-xs text-slate-500">Enter counts for equipment available in this hall.</p>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Projectors</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={resourceForm.projectorCount}
+                      onChange={(event) => setResourceForm((prev) => ({ ...prev, projectorCount: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                      placeholder="0"
+                    />
+                    {resourceErrors.projectorCount && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.projectorCount}</p>}
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Cameras</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={resourceForm.cameraCount}
+                      onChange={(event) => setResourceForm((prev) => ({ ...prev, cameraCount: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                      placeholder="0"
+                    />
+                    {resourceErrors.cameraCount && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.cameraCount}</p>}
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">PCs</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={resourceForm.pcCount}
+                      onChange={(event) => setResourceForm((prev) => ({ ...prev, pcCount: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                      placeholder="0"
+                    />
+                    {resourceErrors.pcCount && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.pcCount}</p>}
+                  </label>
+                </div>
+              </div>
+            )}
 
             <label className="block">
               <span className="mb-1 block text-sm font-semibold text-slate-700">Status</span>

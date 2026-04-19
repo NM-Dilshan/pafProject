@@ -1,7 +1,10 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081/api/v1/tickets'
 
 const getHeaders = () => {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
+  // Match authService storage: sessionStorage with key 'smartcampus_session_token'
+  const token = sessionStorage.getItem('smartcampus_session_token') || 
+                localStorage.getItem('accessToken') || 
+                localStorage.getItem('token')
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
@@ -118,13 +121,10 @@ export const updateComment = async (ticketId, commentId, commentData) => {
 
 // Delete comment
 export const deleteComment = async (ticketId, commentId) => {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
   const response = await fetch(`${API_BASE_URL}/${ticketId}/comments/${commentId}`, {
     method: 'DELETE',
     credentials: 'include',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
+    headers: getHeaders()
   })
   
   if (!response.ok) {

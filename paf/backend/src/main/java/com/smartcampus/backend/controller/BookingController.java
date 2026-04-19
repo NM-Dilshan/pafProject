@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 /**
@@ -26,20 +27,20 @@ import java.util.List;
  * - Advanced filtering and querying
  * 
  * Endpoints:
- * POST   /api/bookings                           - Create booking
- * GET    /api/bookings                           - Get all bookings (admin)
- * GET    /api/bookings/{id}                      - Get single booking
- * GET    /api/bookings/user/{userId}             - Get user's bookings
- * GET    /api/bookings/resource/{resourceId}     - Get resource's bookings
- * GET    /api/bookings/available-slots           - Get available time slots
- * GET    /api/bookings/pending                   - Get pending bookings (admin)
- * GET    /api/bookings/filter                    - Filter bookings by criteria
- * PUT    /api/bookings/{id}/status               - Update booking status (admin)
- * DELETE /api/bookings/{id}                      - Cancel booking (user)
+ * POST /api/bookings - Create booking
+ * GET /api/bookings - Get all bookings (admin)
+ * GET /api/bookings/{id} - Get single booking
+ * GET /api/bookings/user/{userId} - Get user's bookings
+ * GET /api/bookings/resource/{resourceId} - Get resource's bookings
+ * GET /api/bookings/available-slots - Get available time slots
+ * GET /api/bookings/pending - Get pending bookings (admin)
+ * GET /api/bookings/filter - Filter bookings by criteria
+ * PUT /api/bookings/{id}/status - Update booking status (admin)
+ * DELETE /api/bookings/{id} - Cancel booking (user)
  */
 @RestController
 @RequestMapping("/api/bookings")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
+@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174" })
 public class BookingController {
 
     private final BookingService bookingService;
@@ -59,7 +60,7 @@ public class BookingController {
      * - Detect time conflicts
      * - Create booking with PENDING status
      * 
-     * @param request booking details with validation
+     * @param request        booking details with validation
      * @param authentication current authenticated user
      * @return BookingResponse with created booking
      * @status 201 CREATED on success
@@ -93,11 +94,11 @@ public class BookingController {
     public ResponseEntity<List<BookingResponse>> getUserBookings(@PathVariable String userId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = auth.getName();
-        
+
         // Users can only view their own bookings (unless admin)
         boolean isAdmin = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        
+
         if (!isAdmin && !currentUserId.equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
@@ -133,8 +134,8 @@ public class BookingController {
      * - Returns multiple suggestions for user convenience
      * 
      * @param resourceId the resource to check
-     * @param date the booking date (format: YYYY-MM-DD)
-     * @param slotCount number of suggestions to return (default: 5)
+     * @param date       the booking date (format: YYYY-MM-DD)
+     * @param slotCount  number of suggestions to return (default: 5)
      * @return list of available time slots with descriptions
      * @status 200 OK
      */
@@ -143,8 +144,15 @@ public class BookingController {
     public ResponseEntity<List<AvailableSlotResponse>> getAvailableSlots(
             @RequestParam String resourceId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(defaultValue = "5") int slotCount) {
-        List<AvailableSlotResponse> slots = bookingService.suggestAvailableSlots(resourceId, date, slotCount);
+            @RequestParam(defaultValue = "5") int slotCount,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime fromTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime toTime) {
+        List<AvailableSlotResponse> slots = bookingService.suggestAvailableSlots(
+                resourceId,
+                date,
+                slotCount,
+                fromTime,
+                toTime);
         return ResponseEntity.ok(slots);
     }
 
@@ -176,8 +184,8 @@ public class BookingController {
      * If no filters provided, returns all bookings (admin only).
      * 
      * @param resourceId optional: filter by resource
-     * @param date optional: filter by date (format: YYYY-MM-DD)
-     * @param status optional: filter by status
+     * @param date       optional: filter by date (format: YYYY-MM-DD)
+     * @param status     optional: filter by status
      * @return filtered list of bookings
      * @status 200 OK
      */
@@ -239,8 +247,8 @@ public class BookingController {
      * - PENDING → REJECTED (admin rejects with reason)
      * - APPROVED → CANCELLED (user cancels, but admin can also initiate)
      * 
-     * @param id the booking ID
-     * @param request new status and reason
+     * @param id             the booking ID
+     * @param request        new status and reason
      * @param authentication admin user
      * @return updated booking
      * @status 200 OK
@@ -262,14 +270,14 @@ public class BookingController {
     // ===== CANCEL BOOKING (USER) =====
 
     /**
-     * Cancel an approved booking.
+     * Cancel a pending or approved booking.
      * 
      * Only the booking owner can cancel their own bookings.
-     * Can only cancel bookings with APPROVED status.
+     * Can cancel bookings with PENDING or APPROVED status.
      * Requires a reason for the cancellation.
      * 
-     * @param id the booking ID
-     * @param reason reason for cancellation
+     * @param id             the booking ID
+     * @param reason         reason for cancellation
      * @param authentication current user
      * @return cancelled booking
      * @status 200 OK

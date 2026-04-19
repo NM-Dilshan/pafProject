@@ -68,9 +68,16 @@ public class TicketServiceImpl implements TicketService {
         ticket.setUpdatedAt(LocalDateTime.now());
         ticket.setComments(new ArrayList<>());
         ticket.setAttachmentUrls(new ArrayList<>());
+        
+        // SLA calculation based on priority (Member 3 novelty feature)
+        LocalDateTime slaDeadline = calculateSLADeadline(ticket.getPriority());
+        ticket.setSlaDeadline(slaDeadline);
+        ticket.setIsOverdue(false);
+        ticket.setEscalationLevel(EscalationLevel.NORMAL);
+        ticket.setResolvedWithinSla(null); // Set only when resolved/closed
 
         Ticket savedTicket = ticketRepository.save(ticket);
-        log.info("Ticket created with ID: {}", savedTicket.getId());
+        log.info("Ticket created with ID: {} (SLA Deadline: {})", savedTicket.getId(), slaDeadline);
         
         return convertToResponse(savedTicket);
     }
@@ -81,6 +88,9 @@ public class TicketServiceImpl implements TicketService {
         
         Ticket ticket = ticketRepository.findById(ticketId)
             .orElseThrow(() -> new TicketNotFoundException("Ticket not found: " + ticketId));
+        
+        // Update SLA escalation level on retrieval
+        updateSLAEscalation(ticket);
         
         return convertToResponse(ticket);
     }
@@ -152,6 +162,10 @@ public class TicketServiceImpl implements TicketService {
         if (newStatus == TicketStatus.RESOLVED) {
             ticket.setResolutionNotes(request.getResolutionNotes().trim());
             ticket.setResolvedAt(LocalDateTime.now());
+            // Record if resolved within SLA
+            if (ticket.getSlaDeadline() != null) {
+                ticket.setResolvedWithinSla(LocalDateTime.now().isBefore(ticket.getSlaDeadline()));
+            }
         }
         
         if (newStatus == TicketStatus.REJECTED) {
@@ -160,6 +174,10 @@ public class TicketServiceImpl implements TicketService {
         
         if (newStatus == TicketStatus.CLOSED) {
             ticket.setResolvedAt(LocalDateTime.now());
+            // If not already recorded in RESOLVED state, check here
+            if (ticket.getResolvedWithinSla() == null && ticket.getSlaDeadline() != null) {
+                ticket.setResolvedWithinSla(LocalDateTime.now().isBefore(ticket.getSlaDeadline()));
+            }
         }
 
         Ticket updated = ticketRepository.save(ticket);
@@ -318,7 +336,66 @@ public class TicketServiceImpl implements TicketService {
         response.setResolvedAt(ticket.getResolvedAt());
         response.setAttachmentUrls(ticket.getAttachmentUrls());
         response.setComments(ticket.getComments());
+        // SLA fields
+        response.setSlaDeadline(ticket.getSlaDeadline());
+        response.setIsOverdue(ticket.getIsOverdue());
+        response.setEscalationLevel(ticket.getEscalationLevel());
+        response.setResolvedWithinSla(ticket.getResolvedWithinSla());
         
         return response;
+    }
+
+    private LocalDateTime calculateSLADeadline(TicketPriority priority) {
+        LocalDateTime now = LocalDateTime.now();
+        int hoursFromNow;
+        
+        if (priority == TicketPriority.URGENT) {
+            hoursFromNow = 2;      // URGENT: 2 hours
+        } else if (priority == TicketPriority.HIGH) {
+            hoursFromNow = 4;      // HIGH: 4 hours
+        } else if (priority == TicketPriority.MEDIUM) {
+            hoursFromNow = 8;      // MEDIUM: 8 hours
+        } else {  // LOW
+            hoursFromNow = 24;     // LOW: 24 hours
+        }
+        
+        return now.plusHours(hoursFromNow);
+    }
+
+    private void updateSLAEscalation(Ticket ticket) {
+        if (ticket.getStatus() == TicketStatus.RESOLVED || 
+            ticket.getStatus() == TicketStatus.REJECTED ||
+            ticket.getStatus() == TicketStatus.CLOSED) {
+            // No escalation tracking for resolved tickets
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime deadline = ticket.getSlaDeadline();
+        
+        if (deadline == null) {
+            return;
+        }
+
+        // Calculate time until deadline
+        long minutesUntilDeadline = java.time.temporal.ChronoUnit.MINUTES.between(now, deadline);
+        
+        // Update overdue status
+        boolean isOverdue = minutesUntilDeadline < 0;
+        ticket.setIsOverdue(isOverdue);
+
+        // Determine escalation level
+        EscalationLevel level;
+        if (isOverdue) {
+            level = EscalationLevel.OVERDUE;
+        } else if (minutesUntilDeadline <= 30) {
+            level = EscalationLevel.CRITICAL;
+        } else if (minutesUntilDeadline <= 120) {  // 2 hours
+            level = EscalationLevel.WARNING;
+        } else {
+            level = EscalationLevel.NORMAL;
+        }
+        
+        ticket.setEscalationLevel(level);
     }
 }

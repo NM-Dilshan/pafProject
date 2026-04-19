@@ -12,6 +12,32 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const handleNotificationsUpdated = () => {
+      if (isOpen) {
+        fetchNotifications();
+      }
+    };
+
+    window.addEventListener('smartcampus-notifications-updated', handleNotificationsUpdated);
+
+    return () => {
+      window.removeEventListener('smartcampus-notifications-updated', handleNotificationsUpdated);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
   const fetchNotifications = async () => {
     try {
       const data = await getNotifications();

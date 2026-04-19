@@ -9,6 +9,7 @@ import com.smartcampus.backend.repository.BookingRepository;
 import com.smartcampus.backend.repository.ResourceRepository;
 import com.smartcampus.backend.repository.UserRepository;
 import com.smartcampus.backend.service.BookingService;
+import com.smartcampus.backend.service.NotificationTriggerService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,18 +38,21 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final ResourceRepository resourceRepository;
     private final UserRepository userRepository;
+    private final NotificationTriggerService notificationTriggerService;
 
     // Working hours for slot suggestions (08:00 to 18:00)
     private static final LocalTime WORKING_HOURS_START = LocalTime.of(8, 0);
     private static final LocalTime WORKING_HOURS_END = LocalTime.of(18, 0);
-    private static final int SLOT_DURATION_MINUTES = 30;  // 30-minute slots
+    private static final int SLOT_DURATION_MINUTES = 30; // 30-minute slots
 
     public BookingServiceImpl(BookingRepository bookingRepository,
-                            ResourceRepository resourceRepository,
-                            UserRepository userRepository) {
+            ResourceRepository resourceRepository,
+            UserRepository userRepository,
+            NotificationTriggerService notificationTriggerService) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
         this.userRepository = userRepository;
+        this.notificationTriggerService = notificationTriggerService;
     }
 
     // ===== CREATE BOOKING =====
@@ -72,9 +76,9 @@ public class BookingServiceImpl implements BookingService {
                 request.getStartTime(), request.getEndTime())) {
             throw new BookingConflictException(
                     "This time slot is already booked. " +
-                    "Resource " + resource.getHallName() + " is not available from " +
-                    request.getStartTime() + " to " + request.getEndTime() + " on " +
-                    request.getDate());
+                            "Resource " + resource.getHallName() + " is not available from " +
+                            request.getStartTime() + " to " + request.getEndTime() + " on " +
+                            request.getDate());
         }
 
         // Create new booking
@@ -86,8 +90,7 @@ public class BookingServiceImpl implements BookingService {
                 request.getStartTime(),
                 request.getEndTime(),
                 request.getPurpose(),
-                request.getAttendees()
-        );
+                request.getAttendees());
 
         booking.setNotes(request.getNotes());
         booking.setStatus(BookingStatus.PENDING);
@@ -105,25 +108,24 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public boolean hasConflict(String resourceId, LocalDate date, LocalTime startTime, LocalTime endTime) {
         List<Booking> existingBookings = bookingRepository.findActiveBookingsForDate(resourceId, date);
-        
+
         for (Booking existing : existingBookings) {
             // CONFLICT DETECTION ALGORITHM (5 lines):
             // Two bookings conflict if the new booking starts before the existing one ends
             // AND the new booking ends after the existing one starts.
             if (startTime.isBefore(existing.getEndTime()) && endTime.isAfter(existing.getStartTime())) {
-                return true;  // Conflict detected
+                return true; // Conflict detected
             }
         }
-        return false;  // No conflicts
+        return false; // No conflicts
     }
 
     @Override
     public List<Booking> findConflicts(String resourceId, LocalDate date, LocalTime startTime, LocalTime endTime) {
         List<Booking> existingBookings = bookingRepository.findActiveBookingsForDate(resourceId, date);
-        
+
         return existingBookings.stream()
-                .filter(booking ->
-                        startTime.isBefore(booking.getEndTime()) &&
+                .filter(booking -> startTime.isBefore(booking.getEndTime()) &&
                         endTime.isAfter(booking.getStartTime()))
                 .collect(Collectors.toList());
     }
@@ -132,36 +134,64 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public AvailableSlotResponse suggestNextAvailableSlot(String resourceId, LocalDate date) {
-        List<AvailableSlotResponse> slots = suggestAvailableSlots(resourceId, date, 1);
+        List<AvailableSlotResponse> slots = suggestAvailableSlots(resourceId, date, 1, null, null);
         return slots.isEmpty() ? null : slots.get(0);
     }
 
     @Override
     public List<AvailableSlotResponse> suggestAvailableSlots(String resourceId, LocalDate date, int slotCount) {
+        return suggestAvailableSlots(resourceId, date, slotCount, null, null);
+    }
+
+    @Override
+    public List<AvailableSlotResponse> suggestAvailableSlots(
+            String resourceId,
+            LocalDate date,
+            int slotCount,
+            LocalTime rangeStart,
+            LocalTime rangeEnd) {
         // Fetch all active bookings for this date
         List<Booking> bookings = bookingRepository.findActiveBookingsForDate(resourceId, date);
         List<AvailableSlotResponse> availableSlots = new ArrayList<>();
 
+        LocalTime windowStart = rangeStart == null ? WORKING_HOURS_START : rangeStart;
+        LocalTime windowEnd = rangeEnd == null ? WORKING_HOURS_END : rangeEnd;
+
+        if (windowStart.isBefore(WORKING_HOURS_START) || windowEnd.isAfter(WORKING_HOURS_END)) {
+            throw new ValidationException("Selected range must be within working hours (08:00 to 18:00)");
+        }
+
+        if (!windowStart.isBefore(windowEnd)) {
+            throw new ValidationException("Start time must be before end time for slot range");
+        }
+
+        int safeSlotCount = Math.max(1, slotCount);
+
         // Sort bookings by start time
         bookings.sort(Comparator.comparing(Booking::getStartTime));
 
-        LocalTime currentTime = WORKING_HOURS_START;
+        LocalTime currentTime = windowStart;
 
         // Iterate through the day and find free slots
-        while (currentTime.isBefore(WORKING_HOURS_END) && availableSlots.size() < slotCount) {
-            LocalTime slotEnd = currentTime.plusMinutes(SLOT_DURATION_MINUTES);
+        while (currentTime.isBefore(windowEnd) && availableSlots.size() < safeSlotCount) {
+            final LocalTime slotStart = currentTime;
+            LocalTime slotEnd = slotStart.plusMinutes(SLOT_DURATION_MINUTES);
+
+            // Stop if generated slot exceeds selected range
+            if (slotEnd.isAfter(windowEnd)) {
+                break;
+            }
 
             // Check if this slot overlaps with any existing booking
             boolean isSlotFree = bookings.stream()
-                    .noneMatch(booking ->
-                            currentTime.isBefore(booking.getEndTime()) &&
+                    .noneMatch(booking -> slotStart.isBefore(booking.getEndTime()) &&
                             slotEnd.isAfter(booking.getStartTime()));
 
             if (isSlotFree) {
                 String description = String.format("Available from %s to %s",
-                        currentTime.toString(),
+                        slotStart.toString(),
                         slotEnd.toString());
-                availableSlots.add(new AvailableSlotResponse(currentTime, slotEnd, description));
+                availableSlots.add(new AvailableSlotResponse(slotStart, slotEnd, description));
             }
 
             currentTime = slotEnd;
@@ -189,6 +219,17 @@ public class BookingServiceImpl implements BookingService {
         // Save updated booking
         Booking updatedBooking = bookingRepository.save(booking);
 
+        if (updatedBooking.getStatus() == BookingStatus.APPROVED) {
+            notificationTriggerService.triggerBookingApprovedNotification(
+                    updatedBooking.getUserId(),
+                    updatedBooking.getId());
+        } else if (updatedBooking.getStatus() == BookingStatus.REJECTED) {
+            notificationTriggerService.triggerBookingRejectedNotification(
+                    updatedBooking.getUserId(),
+                    updatedBooking.getId(),
+                    updatedBooking.getReason() != null ? updatedBooking.getReason() : "No reason provided");
+        }
+
         // Fetch resource for response
         Resource resource = resourceRepository.findById(updatedBooking.getResourceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
@@ -206,8 +247,9 @@ public class BookingServiceImpl implements BookingService {
             throw new UnauthorizedException("You can only cancel your own bookings");
         }
 
-        // Can only cancel APPROVED bookings
-        if (!booking.getStatus().equals(BookingStatus.APPROVED)) {
+        // Can only cancel PENDING or APPROVED bookings
+        if (!booking.getStatus().equals(BookingStatus.PENDING) &&
+                !booking.getStatus().equals(BookingStatus.APPROVED)) {
             throw new InvalidBookingStatusException(
                     "Cannot cancel booking with status: " + booking.getStatus());
         }
@@ -315,7 +357,7 @@ public class BookingServiceImpl implements BookingService {
         if (startTime.isBefore(WORKING_HOURS_START) || endTime.isAfter(WORKING_HOURS_END)) {
             throw new ValidationException(
                     "Booking times must be within working hours (" + WORKING_HOURS_START +
-                    " to " + WORKING_HOURS_END + ")");
+                            " to " + WORKING_HOURS_END + ")");
         }
     }
 
@@ -365,8 +407,9 @@ public class BookingServiceImpl implements BookingService {
         response.setStatusChangedAt(booking.getStatusChangedAt());
         response.setNotes(booking.getNotes());
 
-        // Set canCancel flag: only if user is owner and status is APPROVED
-        response.setCanCancel(booking.getStatus() == BookingStatus.APPROVED);
+        // Set canCancel flag: only if user is owner and status is PENDING or APPROVED
+        response.setCanCancel(booking.getStatus() == BookingStatus.PENDING ||
+                booking.getStatus() == BookingStatus.APPROVED);
 
         return response;
     }

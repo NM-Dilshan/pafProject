@@ -9,8 +9,10 @@ const CAMPUS_EMAIL_PATTERN = /^[A-Za-z]{2}\d{8}@my\.sliit\.lk$/;
 // Token storage key
 const TOKEN_KEY = 'smartcampus_token';
 const USER_KEY = 'smartcampus_user';
-const LEGACY_TOKEN_KEY = 'token';
-const LEGACY_USER_KEY = 'user';
+
+// Session storage keys (per-tab, not shared across tabs)
+const SESSION_TOKEN_KEY = 'smartcampus_session_token';
+const SESSION_USER_KEY = 'smartcampus_session_user';
 
 /**
  * Validate campus email format
@@ -26,38 +28,35 @@ export const isValidCampusEmail = (email) => {
  * Store authentication token
  */
 export const setToken = (token) => {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(LEGACY_TOKEN_KEY, token);
+  sessionStorage.setItem(SESSION_TOKEN_KEY, token);
 };
 
 /**
  * Get stored authentication token
  */
 export const getToken = () => {
-  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY);
+  return sessionStorage.getItem(SESSION_TOKEN_KEY);
 };
 
 /**
  * Remove authentication token
  */
 export const removeToken = () => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(LEGACY_TOKEN_KEY);
+  sessionStorage.removeItem(SESSION_TOKEN_KEY);
 };
 
 /**
  * Store user data
  */
 export const setUser = (user) => {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-  localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(user));
+  sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(user));
 };
 
 /**
  * Get stored user data
  */
 export const getUser = () => {
-  const userStr = localStorage.getItem(USER_KEY) || localStorage.getItem(LEGACY_USER_KEY);
+  const userStr = sessionStorage.getItem(SESSION_USER_KEY);
   return userStr ? JSON.parse(userStr) : null;
 };
 
@@ -65,8 +64,7 @@ export const getUser = () => {
  * Remove user data
  */
 export const removeUser = () => {
-  localStorage.removeItem(USER_KEY);
-  localStorage.removeItem(LEGACY_USER_KEY);
+  sessionStorage.removeItem(SESSION_USER_KEY);
 };
 
 /**

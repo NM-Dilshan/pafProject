@@ -1,35 +1,56 @@
 import React from 'react'
+import { ArrowLeft } from 'lucide-react'
 import CreateTicketForm from './CreateTicketForm'
 
 export const CreateTicketPage = ({ onSuccess, onCancel }) => {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Create Incident Ticket</h1>
-        <button
-          onClick={onCancel}
-          className="text-gray-600 hover:text-gray-800 font-medium"
-        >
-          ← Back to List
-        </button>
-      </div>
+      {/* Back Button */}
+      <button
+        onClick={onCancel}
+        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Tickets
+      </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Form Container */}
+        <div className="lg:col-span-2 rounded-3xl border border-green-100 bg-white p-8 shadow-sm">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-green-900">Create New Ticket</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Describe your issue and we'll help you resolve it
+            </p>
+          </div>
           <CreateTicketForm onSuccess={onSuccess} />
         </div>
 
-        <div className="lg:col-span-1">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-3">Quick Tips</h3>
-            <ul className="text-sm text-blue-800 space-y-2">
-              <li>✓ Be specific in your title</li>
-              <li>✓ Include all relevant details</li>
-              <li>✓ Add attachments if helpful</li>
-              <li>✓ Provide valid contact info</li>
-              <li>✓ Choose appropriate priority</li>
-            </ul>
-          </div>
+        {/* Quick Tips Sidebar */}
+        <div className="rounded-3xl border border-green-100 bg-gradient-to-br from-green-50 to-green-50/50 p-8 shadow-sm h-fit">
+          <h3 className="text-lg font-bold text-green-900 mb-4">Quick Tips</h3>
+          <ul className="space-y-3 text-sm text-slate-700">
+            <li className="flex gap-3">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs flex-shrink-0">✓</span>
+              <span>Be specific in your title</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs flex-shrink-0">✓</span>
+              <span>Include all relevant details</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs flex-shrink-0">✓</span>
+              <span>Add attachments if helpful</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs flex-shrink-0">✓</span>
+              <span>Provide valid contact info</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs flex-shrink-0">✓</span>
+              <span>Choose appropriate priority</span>
+            </li>
+          </ul>
         </div>
       </div>
     </div>

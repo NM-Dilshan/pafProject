@@ -9,6 +9,7 @@ import TechnicianManager from './components/admin/TechnicianManager';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import AdminBookingsPage from './pages/AdminBookingsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import Alert from './pages/Alert';
 import AdminResourcesPage from './pages/AdminResourcesPage';
 import AdminTicketsPage from './pages/AdminTicketsPage';
 import EnhancedRegistrationPage from './pages/EnhancedRegistrationPage';
@@ -20,9 +21,11 @@ import StaffLoginPage from './pages/StaffLoginPage';
 import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
 import UserDashboardPage from './pages/UserDashboardPage';
+import UserBookingsPage from './pages/UserBookingsPage';
 import { IncidentTicketingPage } from './pages/Incident_tickting';
 import './App.css';
 import StudyAreasPage from './facilities/pages/StudyAreasPage';
+
 
 function Unauthorized() {
   return <Navigate to="/login" replace />;
@@ -46,16 +49,17 @@ function App() {
 
           <Route element={<UserRoute />}>
             <Route path="/dashboard" element={<UserDashboardPage />} />
+            <Route path="/bookings" element={<UserBookingsPage />} />
             <Route path="/study-areas" element={<StudyAreasPage />} />
           </Route>
 
           <Route element={<AdminRoute />}>
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/resources" element={<AdminResourcesPage />} />
+            <Route path="/admin/alerts" element={<Alert />} />
             <Route path="/admin/technicians" element={<TechnicianManager />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
             <Route path="/admin/bookings" element={<AdminBookingsPage />} />
-            <Route path="/admin/reports" element={<Navigate to="/admin/dashboard" replace />} />
           </Route>
 
           <Route element={<TechnicianRoute />}>

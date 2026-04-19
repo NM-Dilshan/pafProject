@@ -145,16 +145,25 @@ const BookingList = ({ refreshTrigger }) => {
     });
   };
 
-  // Check if booking can be cancelled (only PENDING)
-  const canCancel = (booking) => booking.status === 'PENDING';
+  // Check if booking can be cancelled (PENDING or APPROVED)
+  const canCancel = (booking) => booking.status === 'PENDING' || booking.status === 'APPROVED';
+
+  const getResourceName = (booking) =>
+    booking.resource?.hallName || booking.resourceName || 'Unknown Resource';
+
+  const getResourceType = (booking) =>
+    booking.resource?.resourceType || booking.resourceType || '';
+
+  const getBuildingName = (booking) =>
+    booking.resource?.buildingName || booking.buildingName || '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="bg-transparent">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">My Bookings</h1>
-          <p className="mt-2 text-lg text-gray-600">
+          <h1 className="text-4xl font-bold text-green-900">My Bookings</h1>
+          <p className="mt-2 text-lg text-slate-600">
             View and manage your resource bookings
           </p>
         </div>
@@ -209,7 +218,7 @@ const BookingList = ({ refreshTrigger }) => {
 
         {/* Status Filter Tabs */}
         {bookings.length > 0 && (
-          <div className="mb-6 flex flex-wrap gap-2 rounded-lg bg-white p-4 shadow">
+          <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-green-100 bg-white p-4 shadow-sm">
             {['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map(
               (status) => {
                 const count = bookings.filter(
@@ -221,8 +230,8 @@ const BookingList = ({ refreshTrigger }) => {
                     onClick={() => setStatusFilter(status)}
                     className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 ${
                       statusFilter === status
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-green-600 text-white shadow-md'
+                        : 'bg-green-50 text-green-700 hover:bg-green-100'
                     }`}
                   >
                     {status}
@@ -240,9 +249,9 @@ const BookingList = ({ refreshTrigger }) => {
 
         {/* Loading State */}
         {loading && (
-          <div className="flex h-64 items-center justify-center rounded-lg bg-white shadow">
+          <div className="flex h-64 items-center justify-center rounded-2xl border border-green-100 bg-white shadow-sm">
             <div className="text-center">
-              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-green-100 border-t-green-600"></div>
               <p className="text-gray-600">Loading your bookings...</p>
             </div>
           </div>
@@ -250,7 +259,7 @@ const BookingList = ({ refreshTrigger }) => {
 
         {/* Empty State */}
         {!loading && filteredBookings.length === 0 && (
-          <div className="rounded-lg bg-white p-12 text-center shadow">
+          <div className="rounded-2xl border border-green-100 bg-white p-12 text-center shadow-sm">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
               fill="none"
@@ -283,7 +292,7 @@ const BookingList = ({ refreshTrigger }) => {
             {filteredBookings.map((booking) => (
               <div
                 key={booking.id}
-                className="rounded-lg bg-white shadow-md transition-all duration-200 hover:shadow-lg"
+                className="rounded-2xl border border-green-100 bg-white shadow-sm transition-all duration-200 hover:border-green-200 hover:shadow-md"
               >
                 <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
                   {/* Booking Info */}
@@ -291,12 +300,12 @@ const BookingList = ({ refreshTrigger }) => {
                     <div className="mb-3 flex items-start justify-between">
                       <div>
                         <h3 className="text-lg font-bold text-gray-900">
-                          {booking.resource?.hallName || 'Unknown Resource'}
+                          {getResourceName(booking)}
                         </h3>
                         <p className="mt-1 text-sm text-gray-600">
-                          {booking.resource?.resourceType}
-                          {booking.resource?.buildingName &&
-                            ` • ${booking.resource.buildingName}`}
+                          {getResourceType(booking)}
+                          {getBuildingName(booking) &&
+                            ` • ${getBuildingName(booking)}`}
                         </p>
                       </div>
                       <span
@@ -354,7 +363,7 @@ const BookingList = ({ refreshTrigger }) => {
 
                     {/* Additional Info */}
                     {booking.notes && (
-                      <div className="mt-3 rounded-lg bg-gray-50 p-3">
+                      <div className="mt-3 rounded-lg bg-green-50 p-3">
                         <p className="text-xs font-semibold text-gray-600">
                           Notes:
                         </p>
@@ -377,7 +386,7 @@ const BookingList = ({ refreshTrigger }) => {
                     )}
 
                     {booking.status === 'CANCELLED' && booking.cancellationReason && (
-                      <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className="text-xs font-semibold text-gray-600">
                           Cancellation Reason:
                         </p>
@@ -389,7 +398,7 @@ const BookingList = ({ refreshTrigger }) => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 border-t pt-4 sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
+                  <div className="flex gap-2 border-t border-green-100 pt-4 sm:border-t-0 sm:border-l sm:border-green-100 sm:pl-4 sm:pt-0">
                     {canCancel(booking) && (
                       <button
                         onClick={() => handleCancelClick(booking)}
@@ -425,7 +434,7 @@ const BookingList = ({ refreshTrigger }) => {
                     )}
 
                     {!canCancel(booking) && (
-                      <div className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600">
+                      <div className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
                         {booking.status === 'APPROVED' && '✓ Approved'}
                         {booking.status === 'REJECTED' && '✗ Rejected'}
                         {booking.status === 'CANCELLED' && '🚫 Cancelled'}
@@ -441,8 +450,8 @@ const BookingList = ({ refreshTrigger }) => {
         {/* Cancel Confirmation Modal */}
         {showCancelModal && selectedBooking && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-              <div className="border-b border-gray-200 px-6 py-4">
+            <div className="w-full max-w-md rounded-2xl border border-green-100 bg-white shadow-xl">
+              <div className="border-b border-green-100 px-6 py-4">
                 <h2 className="text-lg font-bold text-gray-900">
                   Cancel Booking?
                 </h2>
@@ -451,7 +460,7 @@ const BookingList = ({ refreshTrigger }) => {
               <div className="px-6 py-4">
                 <p className="text-sm text-gray-700">
                   You are about to cancel your booking for{' '}
-                  <strong>{selectedBooking.resource?.hallName}</strong> on{' '}
+                  <strong>{getResourceName(selectedBooking)}</strong> on{' '}
                   <strong>{formatDate(selectedBooking.date)}</strong> at{' '}
                   <strong>
                     {selectedBooking.startTime} - {selectedBooking.endTime}
@@ -473,7 +482,7 @@ const BookingList = ({ refreshTrigger }) => {
                     placeholder="Let us know why you're cancelling..."
                     maxLength="200"
                     rows="3"
-                    className="mt-2 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none"
+                    className="mt-2 block w-full rounded-lg border-2 border-green-200 px-4 py-3 text-sm focus:border-green-500 focus:outline-none"
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     {cancelReason.length}/200 characters
@@ -481,7 +490,7 @@ const BookingList = ({ refreshTrigger }) => {
                 </div>
               </div>
 
-              <div className="flex gap-3 border-t border-gray-200 px-6 py-4">
+              <div className="flex gap-3 border-t border-green-100 px-6 py-4">
                 <button
                   onClick={() => {
                     setShowCancelModal(false);
