@@ -133,7 +133,7 @@ public class GlobalExceptionHandler {
                 Instant.now());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
-
+    
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
         String errorMessage = ex.getBindingResult().getFieldErrors().stream()

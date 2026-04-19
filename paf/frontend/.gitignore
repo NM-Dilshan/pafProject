@@ -7,6 +7,15 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+<<<<<<<<< Temporary merge branch 1
+# Node.js & Package Manager
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment
+=========
 # Node
 node_modules/
 
@@ -16,6 +25,7 @@ dist-ssr/
 build/
 
 # Env
+>>>>>>>>> Temporary merge branch 2
 .env
 .env.*
 !.env.example
@@ -47,7 +57,17 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea
+<<<<<<< HEAD
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.log
+=======
 
 # Temp
 *.tmp
 *.swp
+>>>>>>> 3daa9dd2bd123dd3a28f33f67c46172aa336ab94

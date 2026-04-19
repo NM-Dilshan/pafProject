@@ -104,6 +104,7 @@ public class UserController {
                 null);
 
         List<StudyAreaOccupancyResponse> occupancy = studyAreas.stream()
+                .filter(area -> area.getLatitude() != null && area.getLongitude() != null)
                 .map(area -> new StudyAreaOccupancyResponse(
                         area.getId(),
                         area.getHallName(),
@@ -123,6 +124,7 @@ public class UserController {
                 null);
 
         List<StudyAreaActiveMembersResponse> response = studyAreas.stream()
+                .filter(area -> area.getLatitude() != null && area.getLongitude() != null)
                 .map(area -> {
                     int radius = area.getMapRadiusMeters() == null ? 50 : area.getMapRadiusMeters();
                     List<StudyAreaActiveMembersResponse.ActiveMemberPin> members = activeUserLocationService
