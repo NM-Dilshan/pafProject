@@ -180,11 +180,11 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
   };
 
   return (
-    <div className="w-full bg-gradient-to-br from-blue-50 to-indigo-100 py-4 px-3 sm:px-4 lg:px-5 rounded-2xl">
+    <div className="w-full rounded-2xl border border-green-100 bg-green-50/60 p-3 sm:p-4">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-5">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Booking Management</h1>
+        <div className="mb-4">
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Booking Management</h1>
           <p className="mt-1 text-sm sm:text-base text-gray-600">
             Review and manage pending booking requests
           </p>
@@ -239,7 +239,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
         )}
 
         {/* Search and Stats */}
-        <div className="mb-4 rounded-lg bg-white p-3 shadow sm:p-4">
+        <div className="mb-4 rounded-xl border border-green-100 bg-white p-3 shadow-sm sm:p-4">
           {/* Search Bar */}
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -248,7 +248,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by resource, user, purpose..."
-                className="block w-full rounded-lg border-2 border-gray-300 px-4 py-2.5 pr-10 text-sm focus:border-blue-500 focus:outline-none"
+                className="block w-full rounded-lg border border-slate-300 px-4 py-2.5 pr-10 text-sm focus:border-green-500 focus:outline-none"
               />
               <svg
                 className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
@@ -265,8 +265,8 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
               </svg>
             </div>
 
-            <div className="inline-flex items-center gap-2 rounded-lg bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-800 self-start sm:self-auto">
-              <span className="inline-block h-3 w-3 rounded-full bg-amber-400"></span>
+            <div className="inline-flex items-center gap-2 self-start rounded-lg bg-green-100 px-4 py-2 text-sm font-semibold text-green-800 sm:self-auto">
+              <span className="inline-block h-3 w-3 rounded-full bg-green-500"></span>
               {filteredBookings.length} of {bookings.length}
             </div>
 
@@ -274,8 +274,8 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
               onClick={() => setShowFilters(!showFilters)}
               className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-semibold transition-all duration-200 ${
                 showFilters
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-green-600 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
               <svg
@@ -297,23 +297,23 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
 
           {/* Filter Controls */}
           {showFilters && (
-            <div className="border-t border-gray-200 pt-4">
+            <div className="border-t border-green-100 pt-4">
               <div className="grid gap-4 sm:grid-cols-3">
                 {/* Date Filter */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-gray-600">
+                  <label className="block text-xs font-semibold uppercase text-slate-600">
                     Filter by Date
                   </label>
                   <input
                     type="date"
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+                    className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-green-500 focus:outline-none"
                   />
                   {dateFilter && (
                     <button
                       onClick={() => setDateFilter('')}
-                      className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold"
+                      className="mt-2 text-xs font-semibold text-green-700 hover:text-green-800"
                     >
                       Clear date filter
                     </button>
@@ -322,13 +322,13 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
 
                 {/* Resource Filter */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-gray-600">
+                  <label className="block text-xs font-semibold uppercase text-slate-600">
                     Filter by Resource
                   </label>
                   <select
                     value={resourceFilter}
                     onChange={(e) => setResourceFilter(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+                    className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-green-500 focus:outline-none"
                   >
                     <option value="">All Resources</option>
                     {getUniqueResources().map((resource) => (
@@ -340,7 +340,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
                   {resourceFilter && (
                     <button
                       onClick={() => setResourceFilter('')}
-                      className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold"
+                      className="mt-2 text-xs font-semibold text-green-700 hover:text-green-800"
                     >
                       Clear resource filter
                     </button>
@@ -349,13 +349,13 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
 
                 {/* Status Filter */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-gray-600">
+                  <label className="block text-xs font-semibold uppercase text-slate-600">
                     Filter by Status
                   </label>
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+                    className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-green-500 focus:outline-none"
                   >
                     <option value="ALL">All Statuses</option>
                     <option value="PENDING">Pending</option>
@@ -366,7 +366,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
                   {statusFilter !== 'ALL' && (
                     <button
                       onClick={() => setStatusFilter('ALL')}
-                      className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold"
+                      className="mt-2 text-xs font-semibold text-green-700 hover:text-green-800"
                     >
                       Clear status filter
                     </button>
@@ -378,29 +378,29 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
               {(dateFilter || resourceFilter || statusFilter !== 'ALL') && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {dateFilter && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
                       📅 {dateFilter}
                       <button
                         onClick={() => setDateFilter('')}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-green-700 hover:text-green-900"
                       >
                         ✕
                       </button>
                     </span>
                   )}
                   {resourceFilter && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
                       🏛️ {getUniqueResources().find((r) => r.id === resourceFilter)?.hallName}
                       <button
                         onClick={() => setResourceFilter('')}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-green-700 hover:text-green-900"
                       >
                         ✕
                       </button>
                     </span>
                   )}
                   {statusFilter !== 'ALL' && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
                       {statusFilter === 'PENDING' && '⏳'}
                       {statusFilter === 'APPROVED' && '✓'}
                       {statusFilter === 'REJECTED' && '✗'}
@@ -408,7 +408,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
                       {statusFilter}
                       <button
                         onClick={() => setStatusFilter('ALL')}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-green-700 hover:text-green-900"
                       >
                         ✕
                       </button>
@@ -496,7 +496,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
                   setResourceFilter('');
                   setStatusFilter('ALL');
                 }}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition-all duration-200 hover:bg-blue-700"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 font-semibold text-white transition-all duration-200 hover:bg-green-700"
               >
                 <svg
                   className="h-4 w-4"
@@ -519,19 +519,19 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
 
         {/* Bookings Table */}
         {!loading && filteredBookings.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {filteredBookings.map((booking) => (
               <div
                 key={booking.id}
-                className="rounded-lg bg-white shadow-md transition-all duration-200 hover:shadow-lg overflow-hidden"
+                className="overflow-hidden rounded-xl border border-green-100 bg-white shadow-sm transition-all duration-200 hover:shadow-md"
               >
-                <div className="flex flex-col gap-3 p-4 sm:gap-4">
+                <div className="flex flex-col gap-2.5 p-3 sm:gap-3">
                   {/* Top Section */}
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     {/* Resource & User Info */}
                     <div className="flex-1">
-                      <div className="mb-2">
-                        <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                      <div className="mb-1.5">
+                        <h3 className="text-base font-bold text-gray-900 sm:text-[17px]">
                           {getBookingResourceName(booking)}
                         </h3>
                         <p className="mt-1 text-sm text-gray-600">
@@ -541,7 +541,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
                         </p>
                       </div>
 
-                      <div className="rounded-lg bg-gray-50 p-2.5">
+                      <div className="rounded-lg bg-green-50 p-2">
                         <p className="text-xs font-semibold uppercase text-gray-600">
                           Requested By
                         </p>
@@ -556,7 +556,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
 
                     {/* Status Badge */}
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full border-2 px-3 py-1 text-sm font-semibold self-start ${
+                      className={`inline-flex items-center gap-1 self-start rounded-full border px-2.5 py-1 text-xs font-semibold ${
                         booking.status === 'PENDING'
                           ? 'border-amber-300 bg-amber-100 text-amber-800'
                           : booking.status === 'APPROVED'
@@ -577,7 +577,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
                   </div>
 
                   {/* Details Grid */}
-                  <div className="grid gap-3 border-t border-gray-200 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-2.5 border-t border-green-100 pt-2.5 sm:grid-cols-2 lg:grid-cols-4">
                     {/* Date */}
                     <div>
                       <p className="text-xs font-semibold uppercase text-gray-500">
@@ -620,7 +620,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
                   </div>
 
                   {/* Purpose & Notes */}
-                  <div className="border-t border-gray-200 pt-3">
+                  <div className="border-t border-green-100 pt-2.5">
                     <div>
                       <p className="text-xs font-semibold uppercase text-gray-600">
                         Purpose
@@ -631,11 +631,11 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
                     </div>
 
                     {booking.notes && (
-                      <div className="mt-2 rounded-lg bg-blue-50 p-2.5 border border-blue-200">
-                        <p className="text-xs font-semibold text-blue-700">
+                      <div className="mt-2 rounded-lg border border-green-200 bg-green-50 p-2">
+                        <p className="text-xs font-semibold text-green-700">
                           Additional Notes:
                         </p>
-                        <p className="mt-1 text-sm text-blue-900">
+                        <p className="mt-1 text-sm text-green-900">
                           {booking.notes}
                         </p>
                       </div>
@@ -644,7 +644,7 @@ const AdminBookingPanel = ({ refreshTrigger }) => {
 
                   {/* Actions */}
                   {booking.status === 'PENDING' && (
-                    <div className="flex gap-2 border-t border-gray-200 pt-3 flex-col sm:flex-row">
+                    <div className="flex flex-col gap-2 border-t border-green-100 pt-2.5 sm:flex-row">
                       <button
                         onClick={() => openActionModal(booking, 'APPROVED')}
                         disabled={actioningId === booking.id}

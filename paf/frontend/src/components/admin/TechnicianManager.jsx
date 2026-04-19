@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   AtSign,
   Check,
@@ -22,7 +21,6 @@ import {
   getAllTechnicians,
   updateTechnician,
 } from '../../services/adminService';
-import { useAuth } from '../../context/AuthContext';
 
 const departments = ['IT Support', 'Facilities', 'AV & Media', 'Electrical', 'Plumbing', 'Other'];
 
@@ -42,7 +40,6 @@ const getBarColor = (count) => {
 };
 
 const TechnicianManager = () => {
-  const navigate = useNavigate();
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -219,7 +216,7 @@ const TechnicianManager = () => {
           <button
             type="button"
             onClick={openModal}
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg"
+            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white transition hover:bg-green-700"
           >
             <UserPlus className="h-4 w-4" />
             Add Technician
@@ -232,11 +229,11 @@ const TechnicianManager = () => {
       )}
 
       <div className="flex gap-4 mb-6">
-        <div className="flex-1 rounded-xl bg-indigo-50 p-4 border border-indigo-100">
+        <div className="flex-1 rounded-xl border border-green-100 bg-green-50 p-4">
           <p className="text-sm text-slate-500">Total Technicians</p>
           <div className="flex items-center justify-between mt-2">
             <p className="text-2xl font-semibold text-slate-900">{stats.total}</p>
-            <Users className="h-5 w-5 text-indigo-600" />
+            <Users className="h-5 w-5 text-green-700" />
           </div>
         </div>
         <div className="flex-1 rounded-xl bg-green-50 p-4 border border-green-100">
@@ -267,7 +264,7 @@ const TechnicianManager = () => {
           <button
             type="button"
             onClick={openModal}
-            className="mt-4 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white transition hover:bg-green-700"
           >
             <UserPlus className="h-4 w-4" />
             Add Technician
@@ -289,7 +286,7 @@ const TechnicianManager = () => {
               <div key={tech.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex justify-between">
                   <div className="flex gap-3">
-                    <div className="h-12 w-12 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 font-bold text-green-700">
                       {initials || 'NA'}
                     </div>
                     <div>
@@ -336,7 +333,7 @@ const TechnicianManager = () => {
                   >
                     Deactivate
                   </button>
-                  <button type="button" className="text-indigo-600 text-sm ml-auto">
+                  <button type="button" className="ml-auto text-sm text-green-700 hover:text-green-800">
                     View tickets
                   </button>
                 </div>
@@ -386,7 +383,7 @@ const TechnicianManager = () => {
               </button>
               <button
                 type="button"
-                className="flex-1 bg-indigo-600 text-white rounded-lg py-2"
+                className="flex-1 rounded-lg bg-green-600 py-2 text-white hover:bg-green-700"
                 onClick={() => {
                   closeModal();
                   loadTechnicians();
@@ -522,7 +519,7 @@ const TechnicianManager = () => {
               <button
                 type="submit"
                 disabled={creating}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg py-2 flex items-center justify-center gap-2 disabled:opacity-70"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 py-2 text-white hover:bg-green-700 disabled:opacity-70"
               >
                 {creating ? (
                   <>
