@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import NotificationBell from '../components/NotificationBell'
 import NotificationDropdown from '../components/NotificationDropdown'
@@ -180,9 +181,27 @@ function StatCard({ title, value, icon, change }) {
   )
 }
 
-function QuickActionButton({ title, description, icon, accent = 'bg-green-600' }) {
+function QuickActionButton({ title, description, icon, accent = 'bg-green-600', to, onClick }) {
+  const handleClick = () => {
+    if (onClick) onClick()
+  }
+
+  if (to) {
+    return (
+      <Link to={to} className="group flex items-center gap-4 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white ${accent}`}>
+          {React.createElement(icon, { className: 'h-5 w-5' })}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-bold text-green-900">{title}</span>
+          <span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span>
+        </span>
+      </Link>
+    )
+  }
+
   return (
-    <button className="group flex items-center gap-4 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+    <button onClick={handleClick} className="group flex items-center gap-4 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
       <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white ${accent}`}>
         {React.createElement(icon, { className: 'h-5 w-5' })}
       </span>
@@ -190,22 +209,19 @@ function QuickActionButton({ title, description, icon, accent = 'bg-green-600' }
         <span className="block text-sm font-bold text-green-900">{title}</span>
         <span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span>
       </span>
-    </>
+    </button>
   )
-
-  if (to) {
-    return (
-      <Link to={to} className={className}>
-        {content}
-      </Link>
-    )
-  }
-
-  return <button className={className}>{content}</button>
 }
 
 const UserDashboardPage = () => {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const [showLocationPopup, setShowLocationPopup] = useState(false)
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
+
+  const enableLocation = () => {
+    setShowLocationPopup(false)
+  }
 
   return (
     <div className="min-h-screen bg-green-50 text-slate-900">
@@ -264,7 +280,7 @@ const UserDashboardPage = () => {
                     <a href="#bookings" className="rounded-2xl bg-green-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-green-200 transition hover:bg-green-700">
                       Book a Resource
                     </a>
-                    <a href="#tickets" className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-slate-100">
+                    <a href="/incident-ticketing" className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-slate-100">
                       Report an Issue
                     </a>
                     <a href="#notifications" className="rounded-2xl border border-green-200 bg-white px-5 py-3 text-sm font-bold text-green-700 shadow-sm transition hover:bg-green-50">
@@ -326,6 +342,7 @@ const UserDashboardPage = () => {
                     description="Log facility or IT issues for quick follow-up."
                     icon={CircleAlert}
                     accent="bg-cyan-500"
+                    to="/incident-ticketing"
                   />
                   <QuickActionButton
                     title="View Notifications"
