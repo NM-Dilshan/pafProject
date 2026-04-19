@@ -5,13 +5,13 @@ import AdminRoute from './components/auth/AdminRoute';
 import StaffRoute from './components/auth/StaffRoute';
 import TechnicianRoute from './components/auth/TechnicianRoute';
 import UserRoute from './components/auth/UserRoute';
-import TechnicianManager from './components/admin/TechnicianManager';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import AdminBookingsPage from './pages/AdminBookingsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import Alert from './pages/Alert';
 import AdminResourcesPage from './pages/AdminResourcesPage';
 import AdminTicketsPage from './pages/AdminTicketsPage';
+import AdminTechniciansPage from './pages/AdminTechniciansPage';
 import EnhancedRegistrationPage from './pages/EnhancedRegistrationPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import LoginPage from './pages/LoginPage';
@@ -57,7 +57,7 @@ function App() {
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/resources" element={<AdminResourcesPage />} />
             <Route path="/admin/alerts" element={<Alert />} />
-            <Route path="/admin/technicians" element={<TechnicianManager />} />
+            <Route path="/admin/technicians" element={<AdminTechniciansPage />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
             <Route path="/admin/bookings" element={<AdminBookingsPage />} />
           </Route>
