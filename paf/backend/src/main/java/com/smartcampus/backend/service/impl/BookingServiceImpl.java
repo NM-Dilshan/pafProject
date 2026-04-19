@@ -9,6 +9,7 @@ import com.smartcampus.backend.repository.BookingRepository;
 import com.smartcampus.backend.repository.ResourceRepository;
 import com.smartcampus.backend.repository.UserRepository;
 import com.smartcampus.backend.service.BookingService;
+import com.smartcampus.backend.service.NotificationTriggerService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final ResourceRepository resourceRepository;
     private final UserRepository userRepository;
+    private final NotificationTriggerService notificationTriggerService;
 
     // Working hours for slot suggestions (08:00 to 18:00)
     private static final LocalTime WORKING_HOURS_START = LocalTime.of(8, 0);
@@ -45,10 +47,12 @@ public class BookingServiceImpl implements BookingService {
 
     public BookingServiceImpl(BookingRepository bookingRepository,
             ResourceRepository resourceRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            NotificationTriggerService notificationTriggerService) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
         this.userRepository = userRepository;
+        this.notificationTriggerService = notificationTriggerService;
     }
 
     // ===== CREATE BOOKING =====
@@ -214,6 +218,17 @@ public class BookingServiceImpl implements BookingService {
 
         // Save updated booking
         Booking updatedBooking = bookingRepository.save(booking);
+
+        if (updatedBooking.getStatus() == BookingStatus.APPROVED) {
+            notificationTriggerService.triggerBookingApprovedNotification(
+                    updatedBooking.getUserId(),
+                    updatedBooking.getId());
+        } else if (updatedBooking.getStatus() == BookingStatus.REJECTED) {
+            notificationTriggerService.triggerBookingRejectedNotification(
+                    updatedBooking.getUserId(),
+                    updatedBooking.getId(),
+                    updatedBooking.getReason() != null ? updatedBooking.getReason() : "No reason provided");
+        }
 
         // Fetch resource for response
         Resource resource = resourceRepository.findById(updatedBooking.getResourceId())
