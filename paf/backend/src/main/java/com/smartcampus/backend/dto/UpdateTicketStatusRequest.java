@@ -11,13 +11,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateTicketStatusRequest {
-    
+
     @NotNull(message = "Status is required")
-    @Pattern(regexp = "OPEN|IN_PROGRESS|RESOLVED|CLOSED|REJECTED", 
-            message = "Invalid status value")
+    @Pattern(regexp = "OPEN|IN_PROGRESS|RESOLVED|CLOSED|REJECTED", message = "Invalid status value")
     private String status;
 
     private String resolutionNotes;
-    
+
     private String rejectionReason;
 }
