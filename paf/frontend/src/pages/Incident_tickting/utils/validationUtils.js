@@ -30,8 +30,27 @@ export const VALIDATION_RULES = {
     },
     category: {
       required: true,
+      allowed: [
+        'IT Support',
+        'Facilities',
+        'Electrical',
+        'Network',
+        'Safety',
+        'Cleaning',
+        'Furniture',
+        'Air Conditioning',
+        'Projector / Equipment',
+        'Other'
+      ],
       errorMessages: {
-        required: 'Category is required'
+        required: 'Category is required',
+        invalid: 'Please select a valid category'
+      }
+    },
+    contactNumber: {
+      pattern: /^(\+?1)?(\d{3})?[-.\s]?\d{3}[-.\s]?\d{4}$/,
+      errorMessages: {
+        invalid: 'Please enter a valid phone number (e.g., (123) 456-7890)'
       }
     },
     resourceId: {
@@ -111,6 +130,15 @@ export const validateTicketForm = (formData) => {
   // Category validation
   if (!formData.category || !formData.category.trim()) {
     errors.category = rules.category.errorMessages.required
+  } else if (!rules.category.allowed.includes(formData.category)) {
+    errors.category = rules.category.errorMessages.invalid
+  }
+
+  // Contact number validation (optional field)
+  if (formData.contactNumber && formData.contactNumber.trim()) {
+    if (!rules.contactNumber.pattern.test(formData.contactNumber)) {
+      errors.contactNumber = rules.contactNumber.errorMessages.invalid
+    }
   }
 
   // Resource validation - either resourceId or location required
