@@ -64,6 +64,11 @@ const UserBookingsPage = () => {
     setActiveTab('create');
   };
 
+  const isRoomBookable = (statusValue) => {
+    const normalizedStatus = String(statusValue || '').toUpperCase();
+    return !['UNAVAILABLE', 'UNDER_MAINTENANCE', 'OUT_OF_SERVICE'].includes(normalizedStatus);
+  };
+
   const getRoomStatusStyles = (statusValue) => {
     const normalizedStatus = String(statusValue || '').toUpperCase();
 
@@ -251,13 +256,15 @@ const UserBookingsPage = () => {
                         </p>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => handleBookMeetingRoom(room.id)}
-                        className="mt-4 w-full rounded-xl bg-green-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
-                      >
-                        Book This Meeting Room
-                      </button>
+                      {isRoomBookable(room.status) && (
+                        <button
+                          type="button"
+                          onClick={() => handleBookMeetingRoom(room.id)}
+                          className="mt-4 w-full rounded-xl bg-green-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
+                        >
+                          Book This Meeting Room
+                        </button>
+                      )}
                     </article>
                   ))}
                 </div>
