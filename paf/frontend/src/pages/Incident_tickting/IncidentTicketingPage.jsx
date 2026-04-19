@@ -18,6 +18,10 @@ export const IncidentTicketingPage = () => {
   }
 
   const handleCreateNew = () => {
+    // Admins should not create tickets; only manage them
+    if (isAdmin) {
+      return
+    }
     setCurrentView('create')
   }
 
@@ -43,7 +47,7 @@ export const IncidentTicketingPage = () => {
           />
         )}
 
-        {currentView === 'create' && (
+        {currentView === 'create' && !isAdmin && (
           <CreateTicketPage
             onSuccess={handleCreateSuccess}
             onCancel={handleBack}

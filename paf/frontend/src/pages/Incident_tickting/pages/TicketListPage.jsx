@@ -47,16 +47,23 @@ export const TicketListPage = ({ isAdmin, isTechnician, currentUserId, onCreateN
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">
-          {isAdmin ? 'All Tickets' : isTechnician ? 'Assigned Tickets' : 'My Tickets'}
-        </h1>
-        <button
-          onClick={onCreateNew}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium"
-        >
-          <Plus className="h-5 w-5" />
-          New Ticket
-        </button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isAdmin ? 'All Tickets' : isTechnician ? 'Assigned Tickets' : 'My Tickets'}
+          </h1>
+          {isAdmin && (
+            <p className="text-gray-600 text-sm mt-1">Manage and oversee all support tickets</p>
+          )}
+        </div>
+        {!isAdmin && (
+          <button
+            onClick={onCreateNew}
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium"
+          >
+            <Plus className="h-5 w-5" />
+            New Ticket
+          </button>
+        )}
       </div>
 
       {/* Error Alert */}
@@ -128,13 +135,15 @@ export const TicketListPage = ({ isAdmin, isTechnician, currentUserId, onCreateN
           <p className="text-gray-500 text-lg mb-4">
             {isAdmin ? 'No tickets found' : isTechnician ? 'No tickets assigned to you yet' : 'You have not created any tickets yet'}
           </p>
-          <button
-            onClick={onCreateNew}
-            className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition font-medium"
-          >
-            <Plus className="h-5 w-5" />
-            Create Your First Ticket
-          </button>
+          {!isAdmin && (
+            <button
+              onClick={onCreateNew}
+              className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition font-medium"
+            >
+              <Plus className="h-5 w-5" />
+              Create Your First Ticket
+            </button>
+          )}
         </div>
       )}
     </div>

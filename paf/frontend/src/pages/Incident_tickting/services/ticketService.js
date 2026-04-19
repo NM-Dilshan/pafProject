@@ -1,5 +1,12 @@
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1/tickets'
 
+const getToken = () => {
+  // Match authService storage: sessionStorage with key 'smartcampus_session_token'
+  return sessionStorage.getItem('smartcampus_session_token') || 
+         localStorage.getItem('accessToken') || 
+         localStorage.getItem('token')
+}
+
 const handleResponse = async (response) => {
   const data = await response.json()
   
@@ -20,7 +27,7 @@ export const ticketService = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       },
       body: JSON.stringify(formData)
     })
@@ -32,7 +39,7 @@ export const ticketService = {
     const response = await fetch(`${API_BASE}/${ticketId}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       }
     })
     return handleResponse(response)
@@ -43,7 +50,7 @@ export const ticketService = {
     const response = await fetch(`${API_BASE}/my/tickets`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       }
     })
     return handleResponse(response)
@@ -54,7 +61,7 @@ export const ticketService = {
     const response = await fetch(API_BASE, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       }
     })
     return handleResponse(response)
@@ -66,7 +73,7 @@ export const ticketService = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       },
       body: JSON.stringify({ status, notes })
     })
@@ -78,7 +85,7 @@ export const ticketService = {
     const response = await fetch(`${API_BASE}/${ticketId}/assign?assignToUserId=${userId}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       }
     })
     return handleResponse(response)
@@ -90,7 +97,7 @@ export const ticketService = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       },
       body: JSON.stringify({ content })
     })
@@ -103,7 +110,7 @@ export const ticketService = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       },
       body: JSON.stringify({ content })
     })
@@ -115,7 +122,7 @@ export const ticketService = {
     const response = await fetch(`${API_BASE}/${ticketId}/comments/${commentId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${getToken()}`
       }
     })
     
