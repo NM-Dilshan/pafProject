@@ -20,6 +20,9 @@ public class ResourceResponse {
     private Double latitude;
     private Double longitude;
     private Integer mapRadiusMeters;
+    private Integer projectorCount;
+    private Integer cameraCount;
+    private Integer pcCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -136,6 +139,30 @@ public class ResourceResponse {
 
     public void setMapRadiusMeters(Integer mapRadiusMeters) {
         this.mapRadiusMeters = mapRadiusMeters;
+    }
+
+    public Integer getProjectorCount() {
+        return projectorCount;
+    }
+
+    public void setProjectorCount(Integer projectorCount) {
+        this.projectorCount = projectorCount;
+    }
+
+    public Integer getCameraCount() {
+        return cameraCount;
+    }
+
+    public void setCameraCount(Integer cameraCount) {
+        this.cameraCount = cameraCount;
+    }
+
+    public Integer getPcCount() {
+        return pcCount;
+    }
+
+    public void setPcCount(Integer pcCount) {
+        this.pcCount = pcCount;
     }
 
     public LocalDateTime getCreatedAt() {

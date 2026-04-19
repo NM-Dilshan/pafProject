@@ -50,14 +50,19 @@ const sidebarItems = [
 
 const RESOURCE_TYPES = [
   { value: 'LECTURE_HALL', label: 'Lecture Hall' },
+  { value: 'LAB', label: 'Lab' },
+  { value: 'MEETING_ROOM', label: 'Meeting Room' },
   { value: 'STUDY_AREA', label: 'Study Area' },
 ];
 
 const RESOURCE_STATUSES = [
-  { value: 'AVAILABLE', label: 'Available' },
-  { value: 'UNAVAILABLE', label: 'Unavailable' },
-  { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
+  { value: 'AVAILABLE', label: 'ACTIVE' },
+  { value: 'UNAVAILABLE', label: 'OUT_OF_SERVICE' },
+  { value: 'UNDER_MAINTENANCE', label: 'UNDER_MAINTENANCE' },
 ];
+
+const resourceTypeLabelMap = Object.fromEntries(RESOURCE_TYPES.map((item) => [item.value, item.label]));
+const resourceStatusLabelMap = Object.fromEntries(RESOURCE_STATUSES.map((item) => [item.value, item.label]));
 
 const buildingRowTemplate = (index = 0) => ({
   blockName: String.fromCharCode(65 + index),
@@ -83,7 +88,12 @@ const emptyResourceForm = () => ({
   latitude: '',
   longitude: '',
   mapRadiusMeters: 50,
+  projectorCount: 0,
+  cameraCount: 0,
+  pcCount: 0,
 });
+
+const normalizeSearchValue = (value) => `${value ?? ''}`.trim().toLowerCase();
 
 const statusStyles = {
   AVAILABLE: 'bg-green-100 text-green-800 ring-green-200',
@@ -94,7 +104,7 @@ const statusStyles = {
 function Badge({ value }) {
   return (
     <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyles[value] || statusStyles.UNAVAILABLE}`}>
-      {value.replaceAll('_', ' ')}
+      {resourceStatusLabelMap[value] || value.replaceAll('_', ' ')}
     </span>
   );
 }
@@ -173,7 +183,7 @@ function TopNavbar({ onLogout, user }) {
           </button>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-800">Smart Campus Admin</p>
-            <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Resources Management</h2>
+            <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Resources Catalogue</h2>
           </div>
         </div>
 
@@ -315,7 +325,7 @@ const AdminResourcesPage = () => {
   const [resourceErrors, setResourceErrors] = useState({});
   const [editingBuildingId, setEditingBuildingId] = useState(null);
   const [editingResourceId, setEditingResourceId] = useState(null);
-  const [resourceFilters, setResourceFilters] = useState({ search: '', resourceType: '', buildingId: '', status: '' });
+  const [resourceFilters, setResourceFilters] = useState({ search: '', resourceType: '', buildingId: '', status: '', location: '', capacityMin: '' });
   const [locating, setLocating] = useState(false);
   const blockNameRefs = useRef([]);
   const floorCountRefs = useRef([]);
@@ -344,6 +354,31 @@ const AdminResourcesPage = () => {
     () => studyAreaResources.filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))),
     [studyAreaResources],
   );
+
+  const visibleResources = useMemo(() => {
+    const search = normalizeSearchValue(resourceFilters.search);
+    const location = normalizeSearchValue(resourceFilters.location);
+    const minCapacity = resourceFilters.capacityMin === '' ? null : Number(resourceFilters.capacityMin);
+
+    return resources.filter((resource) => {
+      const matchesSearch = !search || [
+        resource.hallName,
+        resource.buildingName,
+        resource.blockName,
+        resource.description,
+        resource.resourceType,
+        resource.status,
+        resource.projectorCount,
+        resource.cameraCount,
+        resource.pcCount,
+      ].some((field) => normalizeSearchValue(field).includes(search));
+
+      const matchesLocation = !location || [resource.buildingName, resource.blockName, resource.hallName, resource.description].some((field) => normalizeSearchValue(field).includes(location));
+      const matchesCapacity = minCapacity === null || Number(resource.capacity) >= minCapacity;
+
+      return matchesSearch && matchesLocation && matchesCapacity;
+    });
+  }, [resourceFilters.capacityMin, resourceFilters.location, resourceFilters.search, resources]);
 
   const getOccupancyState = (activeCount, capacity) => {
     const normalizedCapacity = Number(capacity) || 0;
@@ -569,6 +604,16 @@ const AdminResourcesPage = () => {
       nextErrors.capacity = 'Capacity must be greater than 0';
     }
 
+    if (!Number.isInteger(Number(resourceForm.projectorCount)) || Number(resourceForm.projectorCount) < 0) {
+      nextErrors.projectorCount = 'Projector count must be 0 or more';
+    }
+    if (!Number.isInteger(Number(resourceForm.cameraCount)) || Number(resourceForm.cameraCount) < 0) {
+      nextErrors.cameraCount = 'Camera count must be 0 or more';
+    }
+    if (!Number.isInteger(Number(resourceForm.pcCount)) || Number(resourceForm.pcCount) < 0) {
+      nextErrors.pcCount = 'PC count must be 0 or more';
+    }
+
     if (resourceForm.resourceType === 'STUDY_AREA') {
       const lat = Number(resourceForm.latitude);
       const lng = Number(resourceForm.longitude);
@@ -631,6 +676,9 @@ const AdminResourcesPage = () => {
         latitude: resource.latitude ?? '',
         longitude: resource.longitude ?? '',
         mapRadiusMeters: resource.mapRadiusMeters ?? 50,
+        projectorCount: resource.projectorCount ?? 0,
+        cameraCount: resource.cameraCount ?? 0,
+        pcCount: resource.pcCount ?? 0,
       });
     } else {
       setEditingResourceId(null);
@@ -729,6 +777,9 @@ const AdminResourcesPage = () => {
         latitude: resourceForm.resourceType === 'STUDY_AREA' ? Number(resourceForm.latitude) : null,
         longitude: resourceForm.resourceType === 'STUDY_AREA' ? Number(resourceForm.longitude) : null,
         mapRadiusMeters: resourceForm.resourceType === 'STUDY_AREA' ? Number(resourceForm.mapRadiusMeters) : null,
+        projectorCount: Number(resourceForm.projectorCount) || 0,
+        cameraCount: Number(resourceForm.cameraCount) || 0,
+        pcCount: Number(resourceForm.pcCount) || 0,
       };
 
       if (editingResourceId) {
@@ -854,7 +905,7 @@ const AdminResourcesPage = () => {
             <section className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Resources Management</h1>
+                  <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Resources Catalogue</h1>
                   <p className="mt-2 text-sm text-slate-600">
                     Manage campus buildings first, then create resources under each building.
                   </p>
@@ -870,7 +921,7 @@ const AdminResourcesPage = () => {
                     <p className="mt-2 text-2xl font-black text-slate-900">{stats.resourceCount}</p>
                   </div>
                   <div className="rounded-2xl bg-green-50 p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Available</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-green-700">Active</p>
                     <p className="mt-2 text-2xl font-black text-slate-900">{stats.availableCount}</p>
                   </div>
                   <div className="rounded-2xl bg-green-50 p-4">
@@ -996,8 +1047,8 @@ const AdminResourcesPage = () => {
                   <div className="space-y-6">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                       <div>
-                        <h2 className="text-lg font-bold text-slate-900">Resources Management</h2>
-                        <p className="mt-1 text-sm text-slate-500">Create and manage hall-based resources under existing buildings.</p>
+                        <h2 className="text-lg font-bold text-slate-900">Resources Catalogue</h2>
+                        <p className="mt-1 text-sm text-slate-500">Create and manage bookable resources, then search and filter by type, capacity, and location.</p>
                       </div>
                       <button
                         type="button"
@@ -1012,14 +1063,14 @@ const AdminResourcesPage = () => {
 
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <label className="block">
-                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Search Hall Name</span>
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Search Resources</span>
                         <div className="relative">
                           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                           <input
                             value={resourceFilters.search}
                             onChange={(event) => setResourceFilters((prev) => ({ ...prev, search: event.target.value }))}
                             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-green-500"
-                            placeholder="Search hall name"
+                            placeholder="Search name, building, block, or description"
                           />
                         </div>
                       </label>
@@ -1054,6 +1105,26 @@ const AdminResourcesPage = () => {
                         </select>
                       </label>
                       <label className="block">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Location</span>
+                        <input
+                          value={resourceFilters.location}
+                          onChange={(event) => setResourceFilters((prev) => ({ ...prev, location: event.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                          placeholder="Building, block, or room"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Min Capacity</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={resourceFilters.capacityMin}
+                          onChange={(event) => setResourceFilters((prev) => ({ ...prev, capacityMin: event.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                          placeholder="Any"
+                        />
+                      </label>
+                      <label className="block">
                         <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Status</span>
                         <select
                           value={resourceFilters.status}
@@ -1077,27 +1148,33 @@ const AdminResourcesPage = () => {
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                           <thead className="bg-slate-50">
                             <tr>
-                              <th className="px-4 py-3 font-semibold text-slate-900">Hall Name</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Resource Name</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Resource Type</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Building</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Block</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Floor</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Hall Number</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Capacity</th>
+                              <th className="px-4 py-3 font-semibold text-slate-900">Equipment</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Status</th>
                               <th className="px-4 py-3 font-semibold text-slate-900">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 bg-white">
-                            {resources.map((resource) => (
+                            {visibleResources.map((resource) => (
                               <tr key={resource.id} className="align-top">
                                 <td className="px-4 py-4 font-semibold text-slate-800">{resource.hallName}</td>
-                                <td className="px-4 py-4 text-slate-600">{RESOURCE_TYPES.find((item) => item.value === resource.resourceType)?.label || resource.resourceType}</td>
+                                <td className="px-4 py-4 text-slate-600">{resourceTypeLabelMap[resource.resourceType] || resource.resourceType}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.buildingName}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.blockName}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.floorNumber}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.hallNumber}</td>
                                 <td className="px-4 py-4 text-slate-600">{resource.capacity}</td>
+                                <td className="px-4 py-4 text-slate-600">
+                                  {resource.resourceType === 'STUDY_AREA'
+                                    ? '-'
+                                    : `Projectors: ${resource.projectorCount || 0}, Cameras: ${resource.cameraCount || 0}, PCs: ${resource.pcCount || 0}`}
+                                </td>
                                 <td className="px-4 py-4">
                                   <Badge value={resource.status} />
                                 </td>
@@ -1130,9 +1207,9 @@ const AdminResourcesPage = () => {
                                 </td>
                               </tr>
                             ))}
-                            {resources.length === 0 && (
+                            {visibleResources.length === 0 && (
                               <tr>
-                                <td className="px-4 py-16 text-center text-slate-500" colSpan="9">
+                                <td className="px-4 py-16 text-center text-slate-500" colSpan="10">
                                   No resources found for the current filters.
                                 </td>
                               </tr>
@@ -1382,7 +1459,7 @@ const AdminResourcesPage = () => {
       {resourceModalOpen && (
         <ModalShell
           title={editingResourceId ? 'Edit Resource' : 'Add Resource'}
-          subtitle="Hall name is generated automatically from block, floor, and hall number."
+          subtitle="Hall name is generated automatically from block, floor, and hall number. Add projector, camera, and PC counts for hall resources."
           onClose={() => setResourceModalOpen(false)}
           footer={
             <div className="flex justify-end gap-3">
@@ -1408,6 +1485,9 @@ const AdminResourcesPage = () => {
                     latitude: nextType === 'STUDY_AREA' ? prev.latitude : '',
                     longitude: nextType === 'STUDY_AREA' ? prev.longitude : '',
                     mapRadiusMeters: nextType === 'STUDY_AREA' ? (prev.mapRadiusMeters || 50) : 50,
+                    projectorCount: nextType === 'STUDY_AREA' ? 0 : prev.projectorCount,
+                    cameraCount: nextType === 'STUDY_AREA' ? 0 : prev.cameraCount,
+                    pcCount: nextType === 'STUDY_AREA' ? 0 : prev.pcCount,
                   }));
                 }}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
@@ -1528,6 +1608,54 @@ const AdminResourcesPage = () => {
               />
               {resourceErrors.capacity && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.capacity}</p>}
             </label>
+
+            {resourceForm.resourceType !== 'STUDY_AREA' && (
+              <div className="md:col-span-2 rounded-2xl border border-green-100 bg-green-50/40 p-4">
+                <p className="text-sm font-semibold text-slate-900">Equipment in Hall</p>
+                <p className="mt-1 text-xs text-slate-500">Enter counts for equipment available in this hall.</p>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Projectors</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={resourceForm.projectorCount}
+                      onChange={(event) => setResourceForm((prev) => ({ ...prev, projectorCount: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                      placeholder="0"
+                    />
+                    {resourceErrors.projectorCount && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.projectorCount}</p>}
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Cameras</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={resourceForm.cameraCount}
+                      onChange={(event) => setResourceForm((prev) => ({ ...prev, cameraCount: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                      placeholder="0"
+                    />
+                    {resourceErrors.cameraCount && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.cameraCount}</p>}
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">PCs</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={resourceForm.pcCount}
+                      onChange={(event) => setResourceForm((prev) => ({ ...prev, pcCount: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-green-500"
+                      placeholder="0"
+                    />
+                    {resourceErrors.pcCount && <p className="mt-1 text-xs font-medium text-red-600">{resourceErrors.pcCount}</p>}
+                  </label>
+                </div>
+              </div>
+            )}
 
             <label className="block">
               <span className="mb-1 block text-sm font-semibold text-slate-700">Status</span>

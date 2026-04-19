@@ -55,6 +55,9 @@ public class ResourceManagementService {
         resource.setLongitude(request.getResourceType() == ResourceType.STUDY_AREA ? request.getLongitude() : null);
         resource.setMapRadiusMeters(
                 request.getResourceType() == ResourceType.STUDY_AREA ? request.getMapRadiusMeters() : null);
+        resource.setProjectorCount(normalizeEquipmentCount(request.getProjectorCount()));
+        resource.setCameraCount(normalizeEquipmentCount(request.getCameraCount()));
+        resource.setPcCount(normalizeEquipmentCount(request.getPcCount()));
         resource.setCreatedAt(LocalDateTime.now());
         resource.setUpdatedAt(LocalDateTime.now());
 
@@ -72,8 +75,7 @@ public class ResourceManagementService {
                         || resource.getBuildingId().equals(buildingId))
                 .filter(resource -> parsedStatus == null || resource.getStatus() == parsedStatus)
                 .filter(resource -> normalizedSearch == null || normalizedSearch.isBlank()
-                        || (resource.getHallName() != null
-                                && resource.getHallName().toLowerCase().contains(normalizedSearch)))
+                        || matchesSearch(resource, normalizedSearch))
                 .sorted(Comparator.comparing(Resource::getHallName, String.CASE_INSENSITIVE_ORDER))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -108,6 +110,9 @@ public class ResourceManagementService {
         existing.setLongitude(request.getResourceType() == ResourceType.STUDY_AREA ? request.getLongitude() : null);
         existing.setMapRadiusMeters(
                 request.getResourceType() == ResourceType.STUDY_AREA ? request.getMapRadiusMeters() : null);
+        existing.setProjectorCount(normalizeEquipmentCount(request.getProjectorCount()));
+        existing.setCameraCount(normalizeEquipmentCount(request.getCameraCount()));
+        existing.setPcCount(normalizeEquipmentCount(request.getPcCount()));
         existing.setUpdatedAt(LocalDateTime.now());
 
         return mapToResponse(resourceRepository.save(existing));
@@ -142,6 +147,16 @@ public class ResourceManagementService {
         }
         if (request.getCapacity() == null || request.getCapacity() < 1) {
             throw new ValidationException("Capacity must be greater than 0");
+        }
+
+        if (request.getProjectorCount() != null && request.getProjectorCount() < 0) {
+            throw new ValidationException("Projector count cannot be negative");
+        }
+        if (request.getCameraCount() != null && request.getCameraCount() < 0) {
+            throw new ValidationException("Camera count cannot be negative");
+        }
+        if (request.getPcCount() != null && request.getPcCount() < 0) {
+            throw new ValidationException("PC count cannot be negative");
         }
 
         Building.Block block = building.getBlocks().stream()
@@ -193,6 +208,9 @@ public class ResourceManagementService {
         response.setLatitude(resource.getLatitude());
         response.setLongitude(resource.getLongitude());
         response.setMapRadiusMeters(resource.getMapRadiusMeters());
+        response.setProjectorCount(resource.getProjectorCount());
+        response.setCameraCount(resource.getCameraCount());
+        response.setPcCount(resource.getPcCount());
         response.setCreatedAt(resource.getCreatedAt());
         response.setUpdatedAt(resource.getUpdatedAt());
         return response;
@@ -226,5 +244,25 @@ public class ResourceManagementService {
         } catch (IllegalArgumentException ex) {
             throw new ValidationException("Invalid resource status value");
         }
+    }
+
+    private boolean matchesSearch(Resource resource, String normalizedSearch) {
+        return contains(resource.getHallName(), normalizedSearch)
+                || contains(resource.getBuildingName(), normalizedSearch)
+                || contains(resource.getBlockName(), normalizedSearch)
+                || contains(resource.getDescription(), normalizedSearch)
+                || contains(resource.getResourceType() == null ? null : resource.getResourceType().name(),
+                        normalizedSearch)
+                || contains(resource.getStatus() == null ? null : resource.getStatus().name(), normalizedSearch)
+                || contains(resource.getCapacity() > 0 ? String.valueOf(resource.getCapacity()) : null,
+                        normalizedSearch);
+    }
+
+    private boolean contains(String value, String normalizedSearch) {
+        return value != null && value.toLowerCase().contains(normalizedSearch);
+    }
+
+    private Integer normalizeEquipmentCount(Integer count) {
+        return count == null ? 0 : count;
     }
 }
