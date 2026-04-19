@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -13,6 +13,8 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from '../NotificationBell';
+import NotificationDropdown from '../NotificationDropdown';
 
 const sidebarItems = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard' },
@@ -27,6 +29,7 @@ const sidebarItems = [
 const AdminLayout = ({ pageTitle, activePath, children }) => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -94,10 +97,13 @@ const AdminLayout = ({ pageTitle, activePath, children }) => {
               </div>
 
               <div className="flex items-center gap-3">
-                <button className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-green-100 text-green-800">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-                </button>
+                <div className="relative">
+                  <NotificationBell onBellClick={() => setIsNotificationOpen((value) => !value)} />
+                  <NotificationDropdown
+                    isOpen={isNotificationOpen}
+                    onClose={() => setIsNotificationOpen(false)}
+                  />
+                </div>
 
                 <div className="hidden items-center gap-2 rounded-xl border border-green-100 bg-white px-3 py-2 sm:flex">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">

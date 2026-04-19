@@ -1,119 +1,75 @@
-// API Base URL
-const API_URL = 'http://localhost:8081/api';
+import axios from 'axios';
+import { getToken, logout } from './authService';
 
-/**
- * Get stored authentication token
- */
-const getToken = () => {
-  return localStorage.getItem('smartcampus_token');
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081/api';
+
+const getAuthHeaders = () => {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error('No authentication token');
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
 };
 
-/**
- * Get all notifications for the current user
- */
 export const getNotifications = async () => {
-  const token = getToken();
-
-  if (!token) {
-    throw new Error('No authentication token');
-  }
-
   try {
-    const response = await fetch(`${API_URL}/notifications`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+    const response = await axios.get(`${API_URL}/notifications`, {
+      headers: getAuthHeaders(),
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        // Redirect to login
-        window.location.href = '/login';
-        return [];
-      }
-      throw new Error(data.message || 'Failed to load notifications');
+    return response.data || [];
+  } catch (error) {
+    if (error.response?.status === 401) {
+      logout();
+      return [];
     }
 
-    return data;
-  } catch (error) {
-    throw new Error(error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to load notifications');
   }
 };
 
-/**
- * Mark a notification as read
- */
 export const markAsRead = async (notificationId) => {
-  const token = getToken();
-
-  if (!token) {
-    throw new Error('No authentication token');
-  }
-
   try {
-    const response = await fetch(`${API_URL}/notifications/${notificationId}/read`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await axios.patch(
+      `${API_URL}/notifications/${notificationId}/read`,
+      {},
+      {
+        headers: getAuthHeaders(),
+      }
+    );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to mark notification as read');
-    }
-
-    return data;
+    return response.data;
   } catch (error) {
-    throw new Error(error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to mark notification as read');
   }
 };
 
-/**
- * Clear all notifications for the current user
- */
-export const clearAllNotifications = async () => {
-  const token = getToken();
-
-  if (!token) {
-    throw new Error('No authentication token');
-  }
-
+export const markAllAsRead = async () => {
   try {
-    const response = await fetch(`${API_URL}/notifications/clear`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+    const response = await axios.patch(`${API_URL}/notifications/read-all`, {}, {
+      headers: getAuthHeaders(),
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to clear notifications');
-    }
-
-    return data;
+    return response.data;
   } catch (error) {
-    throw new Error(error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to mark notifications as read');
   }
 };
 
-/**
- * Get unread notification count
- */
 export const getUnreadCount = async () => {
   try {
-    const notifications = await getNotifications();
-    return notifications.filter(n => n.status === 'UNREAD').length;
+    const response = await axios.get(`${API_URL}/notifications/unread-count`, {
+      headers: getAuthHeaders(),
+    });
+
+    return Number(response.data || 0);
   } catch (error) {
     return 0;
   }
 };
+
+export const clearAllNotifications = markAllAsRead;

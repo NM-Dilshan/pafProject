@@ -99,6 +99,12 @@ public class BookingServiceImpl implements BookingService {
         // Save to database
         Booking savedBooking = bookingRepository.save(booking);
 
+        notificationTriggerService.triggerBookingCreatedNotification(
+                savedBooking.getId(),
+                resource.getHallName(),
+                savedBooking.getDate(),
+                user.getName());
+
         // Convert to response with resource details
         return convertToResponse(savedBooking, resource);
     }
@@ -207,6 +213,9 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new BookingNotFoundException("Booking not found with ID: " + bookingId));
 
+        Resource resource = resourceRepository.findById(booking.getResourceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
+
         // Validate status transition
         validateStatusTransition(booking.getStatus(), request.getStatus());
 
@@ -222,17 +231,17 @@ public class BookingServiceImpl implements BookingService {
         if (updatedBooking.getStatus() == BookingStatus.APPROVED) {
             notificationTriggerService.triggerBookingApprovedNotification(
                     updatedBooking.getUserId(),
-                    updatedBooking.getId());
+                    updatedBooking.getId(),
+                    resource.getHallName(),
+                    updatedBooking.getDate());
         } else if (updatedBooking.getStatus() == BookingStatus.REJECTED) {
             notificationTriggerService.triggerBookingRejectedNotification(
                     updatedBooking.getUserId(),
                     updatedBooking.getId(),
+                    resource.getHallName(),
+                    updatedBooking.getDate(),
                     updatedBooking.getReason() != null ? updatedBooking.getReason() : "No reason provided");
         }
-
-        // Fetch resource for response
-        Resource resource = resourceRepository.findById(updatedBooking.getResourceId())
-                .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
 
         return convertToResponse(updatedBooking, resource);
     }

@@ -10,8 +10,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TicketCommentRequest {
-    
+
     @NotBlank(message = "Comment message is required")
     @Size(min = 2, max = 500, message = "Comment must be between 2 and 500 characters")
     private String message;
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
 }
