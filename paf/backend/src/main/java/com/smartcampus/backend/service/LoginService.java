@@ -24,7 +24,7 @@ public class LoginService {
     
     public AuthenticationResponse login(LoginRequest request) {
         // Find user by email
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail().trim())
             .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
         
         // Verify password

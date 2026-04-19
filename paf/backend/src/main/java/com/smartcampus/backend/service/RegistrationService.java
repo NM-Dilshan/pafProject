@@ -33,7 +33,7 @@ public class RegistrationService {
         emailValidationService.validateCampusEmail(request.getEmail());
         
         // Check if email already exists
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmailIgnoreCase(request.getEmail().trim())) {
             throw new DuplicateEmailException("Email already registered");
         }
         
@@ -43,7 +43,7 @@ public class RegistrationService {
         // Create user
         User user = new User();
         user.setName(request.getName());
-        user.setEmail(request.getEmail());
+        user.setEmail(request.getEmail().trim());
         user.setPasswordHash(passwordHash);
         user.setPhone(request.getPhone());
         user.setRole(Role.USER);

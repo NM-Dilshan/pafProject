@@ -16,9 +16,11 @@ import bookingService from '../services/bookingService';
  * - Loading states and success/error notifications
  * - Responsive design with Tailwind CSS
  */
-const BookingForm = ({ onBookingCreated, onCancel }) => {
+const BookingForm = ({ onBookingCreated, onCancel, preselectedResourceId = '' }) => {
   useAuth();
   const [resources, setResources] = useState([]);
+  const [selectedBuilding, setSelectedBuilding] = useState('');
+  const [buildingTouched, setBuildingTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -45,15 +47,51 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
   const [conflictError, setConflictError] = useState(false);
   const [slotRangeOverlapError, setSlotRangeOverlapError] = useState('');
 
+  const getBuildingKey = (resource) => {
+    return resource?.buildingId || resource?.buildingName || 'UNKNOWN_BUILDING';
+  };
+
+  const getBuildingLabel = (resource) => {
+    return resource?.buildingName || resource?.buildingId || 'Unknown Building';
+  };
+
+  const buildingOptions = resources.reduce((accumulator, resource) => {
+    const key = getBuildingKey(resource);
+    if (!accumulator.some((option) => option.value === key)) {
+      accumulator.push({
+        value: key,
+        label: getBuildingLabel(resource),
+      });
+    }
+    return accumulator;
+  }, []).sort((left, right) => left.label.localeCompare(right.label));
+
+  const buildingMeetingRooms = selectedBuilding
+    ? resources.filter((resource) => getBuildingKey(resource) === selectedBuilding)
+    : [];
+
   // Fetch resources on component mount
   useEffect(() => {
     const loadResources = async () => {
       try {
         setLoading(true);
-        const data = await bookingService.fetchResources();
-        setResources(data);
+        const data = await bookingService.fetchResources({ resourceType: 'MEETING_ROOM' });
+        const safeResources = Array.isArray(data) ? data : [];
+        const sortedResources = [...safeResources].sort((left, right) => {
+          const leftBuilding = String(getBuildingLabel(left)).toLowerCase();
+          const rightBuilding = String(getBuildingLabel(right)).toLowerCase();
+          if (leftBuilding !== rightBuilding) {
+            return leftBuilding.localeCompare(rightBuilding);
+          }
+
+          const leftName = String(left.hallName || '').toLowerCase();
+          const rightName = String(right.hallName || '').toLowerCase();
+          return leftName.localeCompare(rightName);
+        });
+
+        setResources(sortedResources);
       } catch (err) {
-        setError('Failed to load resources. Please try again later.');
+        setError('Failed to load meeting rooms. Please try again later.');
         console.error('Error loading resources:', err);
       } finally {
         setLoading(false);
@@ -62,6 +100,54 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
 
     loadResources();
   }, []);
+
+  useEffect(() => {
+    if (!preselectedResourceId || resources.length === 0) {
+      return;
+    }
+
+    const existsInList = resources.some((resource) => resource.id === preselectedResourceId);
+    if (!existsInList) {
+      return;
+    }
+
+    const preselectedResource = resources.find((resource) => resource.id === preselectedResourceId);
+    if (preselectedResource) {
+      setSelectedBuilding(getBuildingKey(preselectedResource));
+    }
+
+    setFormData((previousData) => {
+      if (previousData.resourceId === preselectedResourceId) {
+        return previousData;
+      }
+
+      return {
+        ...previousData,
+        resourceId: preselectedResourceId,
+      };
+    });
+
+    setTouched((previousTouched) => ({
+      ...previousTouched,
+      resourceId: true,
+    }));
+  }, [preselectedResourceId, resources]);
+
+  useEffect(() => {
+    if (!selectedBuilding || !formData.resourceId) {
+      return;
+    }
+
+    const selectedRoom = resources.find((resource) => resource.id === formData.resourceId);
+    if (!selectedRoom || getBuildingKey(selectedRoom) !== selectedBuilding) {
+      setFormData((previousData) => ({
+        ...previousData,
+        resourceId: '',
+        startTime: '',
+        endTime: '',
+      }));
+    }
+  }, [selectedBuilding, formData.resourceId, resources]);
 
   // Fetch available slots when date and resource change
   useEffect(() => {
@@ -303,6 +389,22 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
     }));
   };
 
+  const handleBuildingChange = (e) => {
+    const nextBuilding = e.target.value;
+    setSelectedBuilding(nextBuilding);
+    setBuildingTouched(true);
+    setFormData((previousData) => ({
+      ...previousData,
+      resourceId: '',
+      startTime: '',
+      endTime: '',
+    }));
+    setTouched((previousTouched) => ({
+      ...previousTouched,
+      resourceId: true,
+    }));
+  };
+
   // Check if custom slot range overlaps with any booked periods
   const checkSlotRangeOverlap = useCallback(() => {
     if (bookedPeriods.length === 0 || slotRange.fromTime >= slotRange.toTime) {
@@ -391,6 +493,12 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
       return acc;
     }, {});
     setTouched(allTouched);
+    setBuildingTouched(true);
+
+    if (!selectedBuilding) {
+      setError('Please select a building first.');
+      return;
+    }
 
     // Validate form one final time
     if (!validateFormData(formData)) {
@@ -434,6 +542,8 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
         attendees: 1,
         notes: '',
       });
+      setSelectedBuilding('');
+      setBuildingTouched(false);
       setTouched({});
 
       // Call parent callback
@@ -473,6 +583,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
 
   // Check if form is valid and no time overlap with booked periods
   const isFormValid = Object.keys(errors).length === 0 && 
+                     selectedBuilding &&
                      formData.resourceId && 
                      formData.date && 
                      formData.startTime && 
@@ -589,24 +700,53 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Resource Selection */}
               <div>
-                <label htmlFor="resourceId" className="block text-sm font-semibold text-gray-900">
-                  Select Resource <span className="text-red-500">*</span>
+                <label htmlFor="building" className="block text-sm font-semibold text-gray-900">
+                  Select Building <span className="text-red-500">*</span>
                 </label>
-                <p className="mt-1 text-xs text-gray-600">Choose the facility or resource you want to book</p>
+                <p className="mt-1 text-xs text-gray-600">Choose the building that has your meeting room</p>
+                <select
+                  id="building"
+                  name="building"
+                  value={selectedBuilding}
+                  onChange={handleBuildingChange}
+                  disabled={loading}
+                  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                    buildingTouched && !selectedBuilding
+                      ? 'border-red-300 bg-red-50 text-gray-900'
+                      : 'border-green-200 bg-white text-gray-900 hover:border-green-300'
+                  } ${loading ? 'cursor-not-allowed opacity-60' : ''}`}
+                >
+                  <option value="">-- Select a Building --</option>
+                  {buildingOptions.map((building) => (
+                    <option key={building.value} value={building.value}>
+                      {building.label}
+                    </option>
+                  ))}
+                </select>
+                {buildingTouched && !selectedBuilding && (
+                  <p className="mt-2 text-sm font-medium text-red-600">Please select a building</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="resourceId" className="block text-sm font-semibold text-gray-900">
+                  Select Meeting Room <span className="text-red-500">*</span>
+                </label>
+                <p className="mt-1 text-xs text-gray-600">Choose a meeting room from the selected building</p>
                 <select
                   id="resourceId"
                   name="resourceId"
                   value={formData.resourceId}
                   onChange={handleChange}
-                  disabled={loading}
+                  disabled={loading || !selectedBuilding}
                   className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
                     touched.resourceId && errors.resourceId
                       ? 'border-red-300 bg-red-50 text-gray-900'
                       : 'border-green-200 bg-white text-gray-900 hover:border-green-300'
-                  } ${loading ? 'cursor-not-allowed opacity-60' : ''}`}
+                  } ${loading || !selectedBuilding ? 'cursor-not-allowed opacity-60' : ''}`}
                 >
-                  <option value="">-- Select a Resource --</option>
-                  {resources.map((resource) => (
+                  <option value="">{selectedBuilding ? '-- Select a Meeting Room --' : '-- Select Building First --'}</option>
+                  {buildingMeetingRooms.map((resource) => (
                     <option key={resource.id} value={resource.id}>
                       {resource.hallName} (Capacity: {resource.capacity} people)
                     </option>

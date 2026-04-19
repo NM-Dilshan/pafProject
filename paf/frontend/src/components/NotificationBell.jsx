@@ -1,25 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { getNotifications } from '../services/notificationService';
+import { getUnreadCount } from '../services/notificationService';
 
 const NotificationBell = ({ onBellClick }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
   const [hasNewNotification, setHasNewNotification] = useState(false);
   const bellRef = useRef(null);
   const previousUnreadCountRef = useRef(0);
   const hasLoadedOnceRef = useRef(false);
   const flashTimeoutRef = useRef(null);
 
-  const fetchNotifications = async () => {
+  const fetchUnreadCount = async () => {
     try {
-      const notifications = await getNotifications();
-      const unreadCount = notifications.filter((n) => n.read === false || n.status === 'UNREAD').length;
+      const nextUnreadCount = await getUnreadCount();
 
-      if (hasLoadedOnceRef.current && unreadCount > previousUnreadCountRef.current) {
+      if (hasLoadedOnceRef.current && nextUnreadCount > previousUnreadCountRef.current) {
         setHasNewNotification(true);
-
-        window.dispatchEvent(new CustomEvent('smartcampus-notifications-updated'));
 
         if (flashTimeoutRef.current) {
           clearTimeout(flashTimeoutRef.current);
@@ -30,9 +26,9 @@ const NotificationBell = ({ onBellClick }) => {
         }, 3500);
       }
 
-      previousUnreadCountRef.current = unreadCount;
+      previousUnreadCountRef.current = nextUnreadCount;
       hasLoadedOnceRef.current = true;
-      setUnreadCount(unreadCount);
+      setUnreadCount(nextUnreadCount);
     } catch (error) {
       console.error('Failed to fetch unread count:', error);
     } finally {
@@ -41,13 +37,22 @@ const NotificationBell = ({ onBellClick }) => {
   };
 
   useEffect(() => {
-    fetchNotifications();
+    fetchUnreadCount();
 
     const interval = setInterval(() => {
-      fetchNotifications();
+      fetchUnreadCount();
     }, 15000);
 
-    return () => clearInterval(interval);
+    const handleNotificationsUpdated = () => {
+      fetchUnreadCount();
+    };
+
+    window.addEventListener('smartcampus-notifications-updated', handleNotificationsUpdated);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('smartcampus-notifications-updated', handleNotificationsUpdated);
+    };
   }, []);
 
   useEffect(() => {
@@ -59,50 +64,31 @@ const NotificationBell = ({ onBellClick }) => {
   }, []);
 
   const handleClick = () => {
-    setIsOpen(!isOpen);
     if (onBellClick) {
       onBellClick();
     }
   };
 
-  const handleClickOutside = (event) => {
-    if (bellRef.current && !bellRef.current.contains(event.target)) {
-      setIsOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
   if (loading) {
     return (
-      <div className="notification-bell" ref={bellRef}>
-        <div className="bell-icon loading">...</div>
+      <div ref={bellRef} className="relative flex h-10 w-10 items-center justify-center">
+        <div className="h-4 w-4 animate-pulse rounded-full bg-emerald-200" />
       </div>
     );
   }
 
   return (
-    <div className="notification-bell" ref={bellRef}>
+    <div ref={bellRef} className="relative flex h-10 w-10 items-center justify-center">
       <button
         type="button"
-        className={`bell-button ${hasNewNotification ? 'animate-pulse ring-2 ring-red-400 ring-offset-2 ring-offset-white' : ''}`}
+        className={`flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-sm transition hover:bg-emerald-50 ${hasNewNotification ? 'animate-pulse ring-2 ring-emerald-400 ring-offset-2 ring-offset-white' : ''}`}
         onClick={handleClick}
         aria-label="Notifications"
       >
         <svg
-          className="bell-icon"
-          style={{ color: unreadCount > 0 ? '#dc2626' : undefined }}
+          className="h-5 w-5"
+          style={{ color: unreadCount > 0 ? '#059669' : '#334155' }}
           viewBox="0 0 24 24"
-          width="24"
-          height="24"
         >
           <path
             fill="currentColor"
@@ -110,7 +96,7 @@ const NotificationBell = ({ onBellClick }) => {
           />
         </svg>
         {unreadCount > 0 && (
-          <span className={`notification-badge ${hasNewNotification ? 'animate-ping bg-red-500' : 'bg-red-600'}`}>
+          <span className={`absolute -right-1 -top-1 min-w-5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold text-white ${hasNewNotification ? 'animate-pulse bg-emerald-500' : 'bg-emerald-600'}`}>
             {unreadCount}
           </span>
         )}

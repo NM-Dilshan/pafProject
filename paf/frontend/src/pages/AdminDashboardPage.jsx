@@ -19,6 +19,8 @@ import { useAuth } from '../context/AuthContext';
 import { getAllTechnicians } from '../services/adminService';
 import bookingService from '../services/bookingService';
 import ticketApiService from './Incident_tickting/services/ticketApiService';
+import NotificationBell from '../components/NotificationBell'
+import NotificationDropdown from '../components/NotificationDropdown'
 
 const sidebarItems = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard', active: true },
@@ -27,7 +29,7 @@ const sidebarItems = [
   { label: 'Manage Technicians', icon: Wrench, to: '/admin/technicians' },
   { label: 'Manage Bookings', icon: CalendarCheck2, to: '/admin/bookings' },
   { label: 'Manage Tickets', icon: Ticket, to: '/admin/tickets' },
-  { label: 'Profile', icon: UserRound, to: '/profile' },
+
 ];
 
 const getStatusLabel = (status) => {
@@ -137,7 +139,7 @@ function Sidebar({ onLogout }) {
   );
 }
 
-function TopNavbar({ onLogout, user }) {
+function TopNavbar({ onLogout, user, isNotificationOpen, setIsNotificationOpen }) {
   return (
     <header className="sticky top-0 z-20 border-b border-green-100 bg-white/90 backdrop-blur">
       <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
@@ -152,10 +154,13 @@ function TopNavbar({ onLogout, user }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-green-100 text-green-800">
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
+          <div className="relative">
+            <NotificationBell onBellClick={() => setIsNotificationOpen((value) => !value)} />
+            <NotificationDropdown
+              isOpen={isNotificationOpen}
+              onClose={() => setIsNotificationOpen(false)}
+            />
+          </div>
 
           <div className="hidden items-center gap-2 rounded-xl border border-green-100 bg-white px-3 py-2 sm:flex">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
@@ -326,6 +331,7 @@ const AdminDashboardPage = () => {
   const { logout, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [dashboardStats, setDashboardStats] = useState({
     totalTechnicians: 0,
     pendingApprovals: 0,
@@ -417,7 +423,12 @@ const AdminDashboardPage = () => {
         <Sidebar onLogout={handleLogout} />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopNavbar onLogout={handleLogout} user={user} />
+          <TopNavbar
+            onLogout={handleLogout}
+            user={user}
+            isNotificationOpen={isNotificationOpen}
+            setIsNotificationOpen={setIsNotificationOpen}
+          />
 
           <main className="flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
             <section className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">

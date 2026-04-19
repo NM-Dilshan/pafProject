@@ -25,6 +25,18 @@ const LoginPage = () => {
     }
   }, [searchParams]);
 
+  const normalizeLoginEmail = (value) => {
+    const trimmed = value.trim();
+    const match = trimmed.match(/^([A-Za-z]{2})(\d{8})@my\.sliit\.lk$/i);
+
+    if (!match) {
+      return trimmed;
+    }
+
+    const [, prefix, digits] = match;
+    return `${prefix.toUpperCase()}${digits}@my.sliit.lk`;
+  };
+
   const validateEmail = (val) => {
     if (!val) return 'Email is required';
     if (!isValidCampusEmail(val)) return 'Use your @my.sliit.lk email';
@@ -58,7 +70,8 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await login(email, password);
+      const normalizedEmail = normalizeLoginEmail(email);
+      const response = await login(normalizedEmail, password);
       setUser(response.user);
 
       if (response.user?.role === 'ADMIN') {

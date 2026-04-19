@@ -8,16 +8,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * ResourceController - Public API endpoints for Resource information.
- * 
- * Provides resource listing for booking system and other modules.
- * These endpoints are accessible to authenticated users.
- * 
- * Endpoints:
- * GET /api/resources                    - Get all available resources
- * GET /api/resources/{id}               - Get resource details
- */
 @RestController
 @RequestMapping("/api/resources")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
