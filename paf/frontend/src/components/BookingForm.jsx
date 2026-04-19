@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import bookingService from '../services/bookingService';
 
@@ -17,13 +17,18 @@ import bookingService from '../services/bookingService';
  * - Responsive design with Tailwind CSS
  */
 const BookingForm = ({ onBookingCreated, onCancel }) => {
-  const { user } = useAuth();
+  useAuth();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [availableSlots, setAvailableSlots] = useState([]);
+  const [bookedPeriods, setBookedPeriods] = useState([]);
   const [showSlotSuggestions, setShowSlotSuggestions] = useState(false);
+  const [slotRange, setSlotRange] = useState({
+    fromTime: '08:00',
+    toTime: '18:00',
+  });
 
   const [formData, setFormData] = useState({
     resourceId: '',
@@ -38,7 +43,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [conflictError, setConflictError] = useState(false);
-  const [showConflictSuggestions, setShowConflictSuggestions] = useState(false);
+  const [slotRangeOverlapError, setSlotRangeOverlapError] = useState('');
 
   // Fetch resources on component mount
   useEffect(() => {
@@ -61,14 +66,57 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
   // Fetch available slots when date and resource change
   useEffect(() => {
     if (formData.resourceId && formData.date) {
+      if (slotRange.fromTime >= slotRange.toTime) {
+        setAvailableSlots([]);
+        return;
+      }
+
       const loadAvailableSlots = async () => {
         try {
           const slots = await bookingService.getAvailableSlots(
             formData.resourceId,
             formData.date,
-            5 // Get 5 suggestions
+            50,
+            slotRange.fromTime,
+            slotRange.toTime
           );
           setAvailableSlots(slots);
+
+          if (slots.length === 0) {
+            setFormData((prev) => ({
+              ...prev,
+              startTime: '',
+              endTime: '',
+            }));
+            setConflictError(true);
+            setError('Selected time range is fully booked. Please choose a different range.');
+            return;
+          }
+
+          if (error === 'Selected time range is fully booked. Please choose a different range.') {
+            setError('');
+          }
+          setConflictError(false);
+
+          const hasCurrentSelection = slots.some(
+            (slot) =>
+              slot.startTime === formData.startTime && slot.endTime === formData.endTime
+          );
+
+          if (slots.length > 0 && !hasCurrentSelection) {
+            const firstSlot = slots[0];
+            setFormData((prev) => ({
+              ...prev,
+              startTime: firstSlot.startTime,
+              endTime: firstSlot.endTime,
+            }));
+          } else if (!hasCurrentSelection) {
+            setFormData((prev) => ({
+              ...prev,
+              startTime: '',
+              endTime: '',
+            }));
+          }
         } catch (err) {
           console.error('Error fetching available slots:', err);
           setAvailableSlots([]);
@@ -76,8 +124,36 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
       };
 
       loadAvailableSlots();
+
+      const loadBookedPeriods = async () => {
+        try {
+          const bookings = await bookingService.getResourceBookings(formData.resourceId);
+          const activeBookings = (bookings || []).filter(
+            (booking) =>
+              booking.date === formData.date &&
+              (booking.status === 'PENDING' || booking.status === 'APPROVED')
+          );
+          setBookedPeriods(activeBookings);
+        } catch (err) {
+          console.error('Error fetching booked periods:', err);
+          setBookedPeriods([]);
+        }
+      };
+
+      loadBookedPeriods();
+    } else {
+      setAvailableSlots([]);
+      setBookedPeriods([]);
     }
-  }, [formData.resourceId, formData.date]);
+  }, [
+    formData.resourceId,
+    formData.date,
+    formData.startTime,
+    formData.endTime,
+    slotRange.fromTime,
+    slotRange.toTime,
+    error,
+  ]);
 
   /**
    * Comprehensive real-time validation for all form fields
@@ -91,7 +167,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
    * - Attendees count (1-1000)
    * - Capacity constraint (attendees vs resource capacity)
    */
-  const validateField = (name, value, currentFormData) => {
+  const validateField = useCallback((name, value, currentFormData) => {
     const fieldErrors = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -171,7 +247,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
         }
         break;
 
-      case 'attendees':
+      case 'attendees': {
         const attendeeNum = parseInt(value);
         if (!value) {
           fieldErrors[name] = 'Number of attendees is required';
@@ -186,16 +262,17 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
           fieldErrors[name] = `Exceeds resource capacity (${selectedResource.capacity} max)`;
         }
         break;
+      }
 
       default:
         break;
     }
 
     return fieldErrors;
-  };
+  }, [resources]);
 
   // Real-time validation on form data change
-  const validateFormData = (data) => {
+  const validateFormData = useCallback((data) => {
     const newErrors = {};
 
     // Validate all fields
@@ -206,12 +283,12 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [validateField]);
 
   // Validate form whenever formData changes
   useEffect(() => {
     validateFormData(formData);
-  }, [formData, resources]);
+  }, [formData, validateFormData]);
 
   // Handle input changes with real-time error clearing
   const handleChange = (e) => {
@@ -226,6 +303,70 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
     }));
   };
 
+  // Check if custom slot range overlaps with any booked periods
+  const checkSlotRangeOverlap = useCallback(() => {
+    if (bookedPeriods.length === 0 || slotRange.fromTime >= slotRange.toTime) {
+      return '';
+    }
+
+    const [rangeStartHour, rangeStartMin] = slotRange.fromTime.split(':');
+    const [rangeEndHour, rangeEndMin] = slotRange.toTime.split(':');
+    const rangeStartTotalMin = parseInt(rangeStartHour) * 60 + parseInt(rangeStartMin);
+    const rangeEndTotalMin = parseInt(rangeEndHour) * 60 + parseInt(rangeEndMin);
+
+    for (let i = 0; i < bookedPeriods.length; i++) {
+      const booking = bookedPeriods[i];
+      const [bookedStartHour, bookedStartMin] = booking.startTime.split(':');
+      const [bookedEndHour, bookedEndMin] = booking.endTime.split(':');
+      const bookedStartTotalMin = parseInt(bookedStartHour) * 60 + parseInt(bookedStartMin);
+      const bookedEndTotalMin = parseInt(bookedEndHour) * 60 + parseInt(bookedEndMin);
+
+      // Check if ranges overlap: range start < booked end AND range end > booked start
+      if (rangeStartTotalMin < bookedEndTotalMin && rangeEndTotalMin > bookedStartTotalMin) {
+        return `Selected slot range ${slotRange.fromTime} - ${slotRange.toTime} overlaps with an already booked time period.`;
+      }
+    }
+
+    return '';
+  }, [slotRange.fromTime, slotRange.toTime, bookedPeriods]);
+
+  // Update range overlap error in real-time
+  useEffect(() => {
+    const overlapError = checkSlotRangeOverlap();
+    setSlotRangeOverlapError(overlapError);
+  }, [checkSlotRangeOverlap]);
+
+  // Check if selected time overlaps with any booked periods
+  const hasTimeOverlapWithBooked = useCallback(() => {
+    if (
+      !formData.startTime ||
+      !formData.endTime ||
+      bookedPeriods.length === 0
+    ) {
+      return false;
+    }
+
+    const [selStartHour, selStartMin] = formData.startTime.split(':');
+    const [selEndHour, selEndMin] = formData.endTime.split(':');
+    const selStartTotalMin = parseInt(selStartHour) * 60 + parseInt(selStartMin);
+    const selEndTotalMin = parseInt(selEndHour) * 60 + parseInt(selEndMin);
+
+    for (let i = 0; i < bookedPeriods.length; i++) {
+      const booking = bookedPeriods[i];
+      const [bookedStartHour, bookedStartMin] = booking.startTime.split(':');
+      const [bookedEndHour, bookedEndMin] = booking.endTime.split(':');
+      const bookedStartTotalMin = parseInt(bookedStartHour) * 60 + parseInt(bookedStartMin);
+      const bookedEndTotalMin = parseInt(bookedEndHour) * 60 + parseInt(bookedEndMin);
+
+      // Check if ranges overlap: selected start < booked end AND selected end > booked start
+      if (selStartTotalMin < bookedEndTotalMin && selEndTotalMin > bookedStartTotalMin) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [formData.startTime, formData.endTime, bookedPeriods]);
+
   // Handle slot suggestion selection
   const handleSelectSlot = (slot) => {
     setFormData((prev) => ({
@@ -234,7 +375,6 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
       endTime: slot.endTime,
     }));
     setShowSlotSuggestions(false);
-    setShowConflictSuggestions(false);
     setConflictError(false);
     setError('');
   };
@@ -255,6 +395,26 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
     // Validate form one final time
     if (!validateFormData(formData)) {
       setError('Please fix all errors before submitting');
+      return;
+    }
+
+    if (
+      formData.resourceId &&
+      formData.date &&
+      slotRange.fromTime < slotRange.toTime &&
+      availableSlots.length === 0
+    ) {
+      setConflictError(true);
+      setError('Selected time range is fully booked. Please choose a different range.');
+      return;
+    }
+
+    // Check if selected time overlaps with booked periods
+    if (hasTimeOverlapWithBooked()) {
+      setConflictError(true);
+      setError(
+        `❌ Selected time ${formData.startTime} - ${formData.endTime} overlaps with an already booked period. Please choose a different time.`
+      );
       return;
     }
 
@@ -293,12 +453,13 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
       // If conflict detected, fetch available slots automatically
       if (isConflictError && formData.resourceId && formData.date) {
         setConflictError(true);
-        setShowConflictSuggestions(true);
         try {
           const slots = await bookingService.getAvailableSlots(
             formData.resourceId,
             formData.date,
-            7 // Get 7 suggestions for conflicts
+            50,
+            slotRange.fromTime,
+            slotRange.toTime
           );
           setAvailableSlots(slots);
         } catch (slotErr) {
@@ -310,14 +471,16 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
     }
   };
 
-  // Check if form is valid
+  // Check if form is valid and no time overlap with booked periods
   const isFormValid = Object.keys(errors).length === 0 && 
                      formData.resourceId && 
                      formData.date && 
                      formData.startTime && 
                      formData.endTime && 
                      formData.purpose.trim().length >= 3 &&
-                     formData.attendees >= 1;
+                     formData.attendees >= 1 &&
+                     !hasTimeOverlapWithBooked() &&
+                     !slotRangeOverlapError;
 
   // Get selected resource for info display
   const selectedResource = resources.find((r) => r.id === formData.resourceId);
@@ -521,60 +684,99 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
               </div>
 
               {/* Time Selection */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="startTime" className="block text-sm font-semibold text-gray-900">
-                    Start Time <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="time"
-                    id="startTime"
-                    name="startTime"
-                    value={formData.startTime}
-                    onChange={handleChange}
-                    min="08:00"
-                    max="18:00"
-                    className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      touched.startTime && errors.startTime
-                        ? 'border-red-300 bg-red-50 text-gray-900'
-                        : 'border-gray-300 bg-white text-gray-900'
-                    }`}
-                  />
-                  {touched.startTime && errors.startTime && (
-                    <p className="mt-2 flex items-center text-sm font-medium text-red-600">
-                      <svg className="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18.101 12.93l-.902-14.85a1.5 1.5 0 00-1.528-1.393H4.329a1.5 1.5 0 00-1.529 1.393L1.899 12.93A3 3 0 104.743 19h10.514a3 3 0 00-2.857-6.07z" clipRule="evenodd" />
-                      </svg>
-                      {errors.startTime}
+              <div className="grid grid-cols-1 gap-6">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-sm font-semibold text-gray-900">Customize Slot Range</p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Choose a time window. Only available slots inside this range will be shown.
+                  </p>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="fromTime" className="block text-xs font-semibold uppercase text-gray-600">
+                        From
+                      </label>
+                      <select
+                        id="fromTime"
+                        value={slotRange.fromTime}
+                        onChange={(e) => setSlotRange((prev) => ({ ...prev, fromTime: e.target.value }))}
+                        className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none"
+                      >
+                        {Array.from({ length: 21 }, (_, index) => {
+                          const totalMinutes = 8 * 60 + index * 30;
+                          const hours = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+                          const minutes = String(totalMinutes % 60).padStart(2, '0');
+                          const timeValue = `${hours}:${minutes}`;
+                          return (
+                            <option key={`from-${timeValue}`} value={timeValue}>
+                              {timeValue}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="toTime" className="block text-xs font-semibold uppercase text-gray-600">
+                        To
+                      </label>
+                      <select
+                        id="toTime"
+                        value={slotRange.toTime}
+                        onChange={(e) => setSlotRange((prev) => ({ ...prev, toTime: e.target.value }))}
+                        className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none"
+                      >
+                        {Array.from({ length: 21 }, (_, index) => {
+                          const totalMinutes = 8 * 60 + index * 30;
+                          const hours = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+                          const minutes = String(totalMinutes % 60).padStart(2, '0');
+                          const timeValue = `${hours}:${minutes}`;
+                          return (
+                            <option key={`to-${timeValue}`} value={timeValue}>
+                              {timeValue}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                  {slotRange.fromTime >= slotRange.toTime && (
+                    <p className="mt-2 text-sm font-medium text-red-600">
+                      From time must be before To time.
                     </p>
                   )}
-                </div>
 
-                <div>
-                  <label htmlFor="endTime" className="block text-sm font-semibold text-gray-900">
-                    End Time <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="time"
-                    id="endTime"
-                    name="endTime"
-                    value={formData.endTime}
-                    onChange={handleChange}
-                    min="08:00"
-                    max="18:00"
-                    className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      touched.endTime && errors.endTime
-                        ? 'border-red-300 bg-red-50 text-gray-900'
-                        : 'border-gray-300 bg-white text-gray-900'
-                    }`}
-                  />
-                  {touched.endTime && errors.endTime && (
-                    <p className="mt-2 flex items-center text-sm font-medium text-red-600">
-                      <svg className="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18.101 12.93l-.902-14.85a1.5 1.5 0 00-1.528-1.393H4.329a1.5 1.5 0 00-1.529 1.393L1.899 12.93A3 3 0 104.743 19h10.514a3 3 0 00-2.857-6.07z" clipRule="evenodd" />
-                      </svg>
-                      {errors.endTime}
+                  {slotRangeOverlapError && (
+                    <div className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3">
+                      <p className="text-sm font-medium text-red-700">
+                        ⚠️ {slotRangeOverlapError}
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="mt-2 text-xs text-gray-500">
+                    The first available slot in this range will be auto-selected.
+                  </p>
+                  {formData.resourceId && formData.date && availableSlots.length === 0 && (
+                    <p className="mt-2 text-sm font-medium text-orange-700">
+                      No available time slots in the selected range. Please adjust the range or date.
                     </p>
+                  )}
+
+                  {formData.resourceId && formData.date && bookedPeriods.length > 0 && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                        Booked Time Periods
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {bookedPeriods.map((booking) => (
+                          <span
+                            key={`booked-${booking.id}`}
+                            className="rounded-full border border-red-300 bg-white px-3 py-1 text-xs font-semibold text-red-700"
+                          >
+                            {booking.startTime} - {booking.endTime}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

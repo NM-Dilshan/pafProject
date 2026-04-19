@@ -21,16 +21,16 @@ import java.util.List;
 public interface BookingService {
 
     // ===== CREATE BOOKING =====
-    
+
     /**
      * Create a new booking with validation and conflict detection.
      * 
      * @param request CreateBookingRequest containing booking details
-     * @param userId ID of the user creating the booking
+     * @param userId  ID of the user creating the booking
      * @return BookingResponse with created booking details
-     * @throws BookingConflictException if time slot is already booked
+     * @throws BookingConflictException  if time slot is already booked
      * @throws ResourceNotFoundException if resource doesn't exist
-     * @throws ValidationException if input validation fails
+     * @throws ValidationException       if input validation fails
      */
     BookingResponse createBooking(CreateBookingRequest request, String userId);
 
@@ -38,12 +38,13 @@ public interface BookingService {
      * Check if a booking time slot conflicts with existing bookings.
      * 
      * This is the CRITICAL conflict detection algorithm:
-     * Two bookings conflict if: new.startTime < existing.endTime AND new.endTime > existing.startTime
+     * Two bookings conflict if: new.startTime < existing.endTime AND new.endTime >
+     * existing.startTime
      * 
      * @param resourceId the resource being booked
-     * @param date the booking date
-     * @param startTime proposed start time
-     * @param endTime proposed end time
+     * @param date       the booking date
+     * @param startTime  proposed start time
+     * @param endTime    proposed end time
      * @return true if conflict exists, false otherwise
      */
     boolean hasConflict(String resourceId, LocalDate date, LocalTime startTime, LocalTime endTime);
@@ -52,15 +53,15 @@ public interface BookingService {
      * Find all conflicts for a proposed booking.
      * 
      * @param resourceId the resource being booked
-     * @param date the booking date
-     * @param startTime proposed start time
-     * @param endTime proposed end time
+     * @param date       the booking date
+     * @param startTime  proposed start time
+     * @param endTime    proposed end time
      * @return list of conflicting bookings
      */
     List<Booking> findConflicts(String resourceId, LocalDate date, LocalTime startTime, LocalTime endTime);
 
     // ===== SMART SUGGESTION =====
-    
+
     /**
      * Get the next available time slot for a resource on a given date.
      * 
@@ -72,7 +73,7 @@ public interface BookingService {
      * 5. Respect working hours (typically 08:00-18:00)
      * 
      * @param resourceId the resource
-     * @param date the booking date
+     * @param date       the booking date
      * @return AvailableSlotResponse with next available slot
      */
     AvailableSlotResponse suggestNextAvailableSlot(String resourceId, LocalDate date);
@@ -81,14 +82,31 @@ public interface BookingService {
      * Get multiple available slots for a resource on a given date.
      * 
      * @param resourceId the resource
-     * @param date the booking date
-     * @param slotCount number of suggested slots to return
+     * @param date       the booking date
+     * @param slotCount  number of suggested slots to return
      * @return list of available slots
      */
     List<AvailableSlotResponse> suggestAvailableSlots(String resourceId, LocalDate date, int slotCount);
 
+    /**
+     * Get available slots within a custom time range for a given date.
+     *
+     * @param resourceId the resource
+     * @param date       the booking date
+     * @param slotCount  number of suggested slots to return
+     * @param rangeStart optional range start (defaults to working hours start)
+     * @param rangeEnd   optional range end (defaults to working hours end)
+     * @return list of available slots
+     */
+    List<AvailableSlotResponse> suggestAvailableSlots(
+            String resourceId,
+            LocalDate date,
+            int slotCount,
+            LocalTime rangeStart,
+            LocalTime rangeEnd);
+
     // ===== UPDATE BOOKING STATUS =====
-    
+
     /**
      * Update booking status with workflow validation.
      * 
@@ -99,10 +117,10 @@ public interface BookingService {
      * - Other transitions are invalid
      * 
      * @param bookingId the booking to update
-     * @param request UpdateBookingStatusRequest with new status and reason
-     * @param adminId ID of the admin making the change
+     * @param request   UpdateBookingStatusRequest with new status and reason
+     * @param adminId   ID of the admin making the change
      * @return BookingResponse with updated booking
-     * @throws BookingNotFoundException if booking doesn't exist
+     * @throws BookingNotFoundException      if booking doesn't exist
      * @throws InvalidBookingStatusException if transition is invalid
      */
     BookingResponse updateBookingStatus(String bookingId, UpdateBookingStatusRequest request, String adminId);
@@ -111,16 +129,16 @@ public interface BookingService {
      * Cancel a booking (typically by user).
      * 
      * @param bookingId the booking to cancel
-     * @param userId ID of the user (must be booking owner)
-     * @param reason reason for cancellation
+     * @param userId    ID of the user (must be booking owner)
+     * @param reason    reason for cancellation
      * @return BookingResponse with cancelled booking
-     * @throws UnauthorizedException if user is not the booking owner
+     * @throws UnauthorizedException         if user is not the booking owner
      * @throws InvalidBookingStatusException if booking cannot be cancelled
      */
     BookingResponse cancelBooking(String bookingId, String userId, String reason);
 
     // ===== GET BOOKINGS (FILTERING) =====
-    
+
     /**
      * Get all bookings for a specific user.
      * 
@@ -148,8 +166,8 @@ public interface BookingService {
      * Get bookings with multiple filters.
      * 
      * @param resourceId optional: filter by resource
-     * @param date optional: filter by date
-     * @param status optional: filter by status
+     * @param date       optional: filter by date
+     * @param status     optional: filter by status
      * @return list of filtered bookings
      */
     List<BookingResponse> filterBookings(String resourceId, LocalDate date, BookingStatus status);
@@ -174,23 +192,23 @@ public interface BookingService {
      * Get bookings for a resource within a date range.
      * 
      * @param resourceId the resource ID
-     * @param startDate start date (inclusive)
-     * @param endDate end date (inclusive)
+     * @param startDate  start date (inclusive)
+     * @param endDate    end date (inclusive)
      * @return list of bookings within the range
      */
     List<BookingResponse> getBookingsByDateRange(String resourceId, LocalDate startDate, LocalDate endDate);
 
     // ===== VALIDATION & UTILITY METHODS =====
-    
+
     /**
      * Validate that a proposed booking time is valid.
      * - startTime must be before endTime
      * - date cannot be in the past
      * - time slot must be within working hours (optional)
      * 
-     * @param date the booking date
+     * @param date      the booking date
      * @param startTime the start time
-     * @param endTime the end time
+     * @param endTime   the end time
      * @throws ValidationException if validation fails
      */
     void validateBookingTime(LocalDate date, LocalTime startTime, LocalTime endTime);
@@ -199,7 +217,7 @@ public interface BookingService {
      * Validate that status transition is allowed.
      * 
      * @param currentStatus the current status
-     * @param newStatus the proposed new status
+     * @param newStatus     the proposed new status
      * @throws InvalidBookingStatusException if transition is invalid
      */
     void validateStatusTransition(BookingStatus currentStatus, BookingStatus newStatus);

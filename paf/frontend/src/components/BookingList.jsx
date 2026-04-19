@@ -145,8 +145,17 @@ const BookingList = ({ refreshTrigger }) => {
     });
   };
 
-  // Check if booking can be cancelled (only PENDING)
-  const canCancel = (booking) => booking.status === 'PENDING';
+  // Check if booking can be cancelled (PENDING or APPROVED)
+  const canCancel = (booking) => booking.status === 'PENDING' || booking.status === 'APPROVED';
+
+  const getResourceName = (booking) =>
+    booking.resource?.hallName || booking.resourceName || 'Unknown Resource';
+
+  const getResourceType = (booking) =>
+    booking.resource?.resourceType || booking.resourceType || '';
+
+  const getBuildingName = (booking) =>
+    booking.resource?.buildingName || booking.buildingName || '';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4 sm:px-6 lg:px-8">
@@ -291,12 +300,12 @@ const BookingList = ({ refreshTrigger }) => {
                     <div className="mb-3 flex items-start justify-between">
                       <div>
                         <h3 className="text-lg font-bold text-gray-900">
-                          {booking.resource?.hallName || 'Unknown Resource'}
+                          {getResourceName(booking)}
                         </h3>
                         <p className="mt-1 text-sm text-gray-600">
-                          {booking.resource?.resourceType}
-                          {booking.resource?.buildingName &&
-                            ` • ${booking.resource.buildingName}`}
+                          {getResourceType(booking)}
+                          {getBuildingName(booking) &&
+                            ` • ${getBuildingName(booking)}`}
                         </p>
                       </div>
                       <span
@@ -451,7 +460,7 @@ const BookingList = ({ refreshTrigger }) => {
               <div className="px-6 py-4">
                 <p className="text-sm text-gray-700">
                   You are about to cancel your booking for{' '}
-                  <strong>{selectedBooking.resource?.hallName}</strong> on{' '}
+                  <strong>{getResourceName(selectedBooking)}</strong> on{' '}
                   <strong>{formatDate(selectedBooking.date)}</strong> at{' '}
                   <strong>
                     {selectedBooking.startTime} - {selectedBooking.endTime}

@@ -44,6 +44,15 @@ public class ResourceRequest {
 
     private Integer mapRadiusMeters;
 
+    @Min(value = 0, message = "Projector count cannot be negative")
+    private Integer projectorCount;
+
+    @Min(value = 0, message = "Camera count cannot be negative")
+    private Integer cameraCount;
+
+    @Min(value = 0, message = "PC count cannot be negative")
+    private Integer pcCount;
+
     public ResourceRequest() {
     }
 
@@ -133,5 +142,29 @@ public class ResourceRequest {
 
     public void setMapRadiusMeters(Integer mapRadiusMeters) {
         this.mapRadiusMeters = mapRadiusMeters;
+    }
+
+    public Integer getProjectorCount() {
+        return projectorCount;
+    }
+
+    public void setProjectorCount(Integer projectorCount) {
+        this.projectorCount = projectorCount;
+    }
+
+    public Integer getCameraCount() {
+        return cameraCount;
+    }
+
+    public void setCameraCount(Integer cameraCount) {
+        this.cameraCount = cameraCount;
+    }
+
+    public Integer getPcCount() {
+        return pcCount;
+    }
+
+    public void setPcCount(Integer pcCount) {
+        this.pcCount = pcCount;
     }
 }

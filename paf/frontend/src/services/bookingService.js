@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getToken } from './authService';
 
 const API_BASE_URL = 'http://localhost:8081/api';
 
@@ -18,7 +19,7 @@ const api = axios.create({
 
 // Add token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = getToken() || localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -121,15 +122,25 @@ export const getUserBookings = async (userId) => {
  * @param {string} resourceId - Resource ID
  * @param {string} date - Date (YYYY-MM-DD)
  * @param {number} slotCount - Number of suggestions (default: 5)
+ * @param {string} fromTime - Optional range start (HH:mm)
+ * @param {string} toTime - Optional range end (HH:mm)
  * @returns {Promise<Array>} List of available slots
  */
-export const getAvailableSlots = async (resourceId, date, slotCount = 5) => {
+export const getAvailableSlots = async (
+  resourceId,
+  date,
+  slotCount = 5,
+  fromTime,
+  toTime
+) => {
   try {
     const response = await api.get('/bookings/available-slots', {
       params: {
         resourceId,
         date,
         slotCount,
+        fromTime,
+        toTime,
       },
     });
     return response.data;
