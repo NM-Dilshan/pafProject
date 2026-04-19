@@ -44,7 +44,7 @@ public class NotificationTriggerService {
         notificationService.createNotification(
                 userId,
                 "Booking Approved",
-                NotificationType.BOOKING_APPROVED,
+                NotificationType.valueOf("BOOKING_APPROVED"),
                 bookingId,
                 "Your booking for " + resourceName + " on " + formatDate(bookingDate) + " has been approved.",
                 null);
