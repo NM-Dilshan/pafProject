@@ -5,6 +5,7 @@ import PortalHeader from '../../components/PortalHeader'
 import TicketListPage from './pages/TicketListPage'
 import CreateTicketPage from './pages/CreateTicketPage'
 import TicketDetailsPage from './pages/TicketDetailsPage'
+import TicketAssistantWidget from './components/TicketAssistantWidget'
 
 export const IncidentTicketingPage = () => {
   const { user, logout } = useAuth()
@@ -102,6 +103,8 @@ export const IncidentTicketingPage = () => {
           />
         )}
       </main>
+
+      <TicketAssistantWidget role={user?.role} />
     </div>
   )
 }

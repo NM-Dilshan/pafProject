@@ -378,6 +378,15 @@ public class TicketServiceImpl implements TicketService {
                 .orElse(safeUserId);
     }
 
+    private String resolveUserEmail(String userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userRepository.findById(userId)
+                .map(u -> u != null ? u.getEmail() : null)
+                .orElse(null);
+    }
+
     private TicketResponse convertToResponse(Ticket ticket) {
         TicketResponse response = new TicketResponse();
         response.setId(ticket.getId());
@@ -391,6 +400,7 @@ public class TicketServiceImpl implements TicketService {
         response.setPreferredContact(ticket.getPreferredContact());
         response.setReportedBy(ticket.getReportedBy());
         response.setReportedByName(ticket.getReportedByName());
+        response.setReportedByEmail(resolveUserEmail(ticket.getReportedBy()));
         response.setAssignedTo(ticket.getAssignedTo());
         response.setAssignedToName(ticket.getAssignedToName());
         response.setResolutionNotes(ticket.getResolutionNotes());

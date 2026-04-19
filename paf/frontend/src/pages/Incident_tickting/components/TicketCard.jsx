@@ -39,7 +39,6 @@ export const TicketCard = ({ ticket, onClick }) => {
         </div>
 
         <div className="flex items-center gap-4 text-xs text-slate-600">
-          <span>#{ticket.id.substring(0, 8)}</span>
           <span>{createdDate}</span>
           {ticket.comments && ticket.comments.length > 0 && (
             <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-green-800 font-semibold">

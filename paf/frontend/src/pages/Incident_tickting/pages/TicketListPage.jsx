@@ -11,7 +11,9 @@ export const TicketListPage = ({ isAdmin, isTechnician, onCreateNew, onViewTicke
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filterStatus, setFilterStatus] = useState('ALL')
+  const [filterPriority, setFilterPriority] = useState('ALL')
   const [viewMode, setViewMode] = useState('grid')
+  const [showFilters, setShowFilters] = useState(false)
 
   const fetchTickets = useCallback(async () => {
     setIsLoading(true)
@@ -49,9 +51,11 @@ export const TicketListPage = ({ isAdmin, isTechnician, onCreateNew, onViewTicke
     return () => window.removeEventListener('smartcampus-notifications-updated', handleNotificationsUpdated)
   }, [fetchTickets])
 
-  const filteredTickets = filterStatus === 'ALL'
-    ? tickets
-    : tickets.filter(t => t.status === filterStatus)
+  const filteredTickets = tickets.filter(t => {
+    const statusMatch = filterStatus === 'ALL' || t.status === filterStatus
+    const priorityMatch = filterPriority === 'ALL' || t.priority === filterPriority
+    return statusMatch && priorityMatch
+  })
 
   return (
     <div className="space-y-6">
@@ -83,46 +87,151 @@ export const TicketListPage = ({ isAdmin, isTechnician, onCreateNew, onViewTicke
 
         {/* Filter and View Mode Controls */}
         <div className="mb-8 space-y-4 border-b border-green-100 pb-6">
-          {/* Status Filter Tabs */}
-          <div className="flex flex-wrap gap-2">
-            {['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'].map((status) => (
+          {/* Top Bar: Count, Filters Toggle, View Toggle */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            {/* Result Count Badge */}
+            <div className="inline-flex items-center gap-2 self-start sm:self-auto rounded-lg bg-green-100 px-4 py-2 text-sm font-semibold text-green-800">
+              <span className="inline-block h-3 w-3 rounded-full bg-green-500"></span>
+              {filteredTickets.length} of {tickets.length}
+            </div>
+
+            {/* Filters Toggle Button */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-semibold transition-all duration-200 ${
+                showFilters
+                  ? 'bg-green-600 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <svg
+                className={`h-5 w-5 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                />
+              </svg>
+              Filters
+            </button>
+
+            {/* View Mode Toggle */}
+            <div className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white p-1">
               <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                  filterStatus === status
-                    ? 'bg-green-100 text-green-700 border border-green-300'
-                    : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition ${
+                  viewMode === 'grid'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-transparent text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                {status}
+                Grid
               </button>
-            ))}
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition ${
+                  viewMode === 'table'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-transparent text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Table
+              </button>
+            </div>
           </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition ${
-                viewMode === 'grid'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Grid
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition ${
-                viewMode === 'table'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Table
-            </button>
-          </div>
+          {/* Filter Controls - Expandable */}
+          {showFilters && (
+            <div className="border-t border-green-100 pt-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-600">
+                    Filter by Status
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-green-500 focus:outline-none"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="OPEN">Open</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="RESOLVED">Resolved</option>
+                    <option value="CLOSED">Closed</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                  {filterStatus !== 'ALL' && (
+                    <button
+                      onClick={() => setFilterStatus('ALL')}
+                      className="mt-2 text-xs font-semibold text-green-700 hover:text-green-800"
+                    >
+                      Clear status filter
+                    </button>
+                  )}
+                </div>
+
+                {/* Priority Filter */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-600">
+                    Filter by Priority
+                  </label>
+                  <select
+                    value={filterPriority}
+                    onChange={(e) => setFilterPriority(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-green-500 focus:outline-none"
+                  >
+                    <option value="ALL">All Priorities</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                  </select>
+                  {filterPriority !== 'ALL' && (
+                    <button
+                      onClick={() => setFilterPriority('ALL')}
+                      className="mt-2 text-xs font-semibold text-green-700 hover:text-green-800"
+                    >
+                      Clear priority filter
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Active Filters Display */}
+              {(filterStatus !== 'ALL' || filterPriority !== 'ALL') && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {filterStatus !== 'ALL' && (
+                    <div className="inline-flex items-center gap-2 rounded-lg bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-800">
+                      Status: {filterStatus.replace(/_/g, ' ')}
+                      <button
+                        onClick={() => setFilterStatus('ALL')}
+                        className="ml-1 font-bold hover:text-green-900"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                  {filterPriority !== 'ALL' && (
+                    <div className="inline-flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800">
+                      Priority: {filterPriority}
+                      <button
+                        onClick={() => setFilterPriority('ALL')}
+                        className="ml-1 font-bold hover:text-amber-900"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}
