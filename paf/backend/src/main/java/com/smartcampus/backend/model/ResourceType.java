@@ -8,6 +8,7 @@ import java.util.Locale;
 public enum ResourceType {
     LECTURE_HALL,
     LAB,
+    MEETING_ROOM,
     STUDY_AREA
 
     ;
@@ -22,6 +23,18 @@ public enum ResourceType {
 
         if ("LABORATORY".equals(normalized)) {
             return LAB;
+        }
+
+        if ("MEETING_ROOM".equals(normalized)) {
+            return MEETING_ROOM;
+        }
+
+        if ("MEETING".equals(normalized)) {
+            return MEETING_ROOM;
+        }
+
+        if ("CLASSROOM".equals(normalized)) {
+            return LECTURE_HALL;
         }
 
         return ResourceType.valueOf(normalized);

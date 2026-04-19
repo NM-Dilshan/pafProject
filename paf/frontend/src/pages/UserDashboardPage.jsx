@@ -21,6 +21,8 @@ import {
 } from 'lucide-react'
 
 const MotionDiv = motion.div
+const ALERT_ROTATION_INTERVAL_MS = 10 * 1000
+const ALERT_FETCH_INTERVAL_MS = 10 * 1000
 
 const recentTickets = [
   { title: 'Projector not working', category: 'IT Support', status: 'Open', time: '10 min ago' },
@@ -316,7 +318,7 @@ const UserDashboardPage = () => {
     }
 
     loadCampusAlerts()
-    const fetchIntervalId = window.setInterval(loadCampusAlerts, 30 * 1000)
+    const fetchIntervalId = window.setInterval(loadCampusAlerts, ALERT_FETCH_INTERVAL_MS)
 
     return () => window.clearInterval(fetchIntervalId)
   }, [])
@@ -328,7 +330,7 @@ const UserDashboardPage = () => {
 
     const rotateIntervalId = window.setInterval(() => {
       setCurrentAlertIndex((prev) => (prev + 1) % campusAlerts.length)
-    }, 30 * 1000)
+    }, ALERT_ROTATION_INTERVAL_MS)
 
     return () => window.clearInterval(rotateIntervalId)
   }, [campusAlerts.length])
@@ -397,20 +399,55 @@ const UserDashboardPage = () => {
               <MotionDiv
                 whileHover={{ y: -2 }}
                 transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-                className="rounded-[24px] border border-green-100 bg-white p-6"
+                className="campus-alert-card rounded-[24px] border border-green-100 bg-white p-6"
               >
-                <div className="flex items-center gap-2 text-green-800">
-                  <AlertTriangle className="h-5 w-5" />
-                  <p className="text-2xl font-extrabold">Campus Alert</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 text-green-900">
+                    <span className="campus-alert-icon-wrap">
+                      <AlertTriangle className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <p className="text-2xl font-extrabold">Campus Alert</p>
+                      <p className="text-sm font-semibold text-emerald-700">Updates every 10 seconds</p>
+                    </div>
+                  </div>
+                  {campusAlerts.length > 1 && (
+                    <span className="campus-alert-pill">
+                      {currentAlertIndex + 1} / {campusAlerts.length}
+                    </span>
+                  )}
                 </div>
                 {currentCampusAlertMessage ? (
-                  <>
-                    <p className="mt-3 text-lg text-slate-600">{currentCampusAlertMessage}</p>
-                  </>
+                  <MotionDiv
+                    key={`${currentAlertIndex}-${currentCampusAlertMessage}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                    className="campus-alert-message mt-4"
+                  >
+                    <p className="text-lg text-slate-700">{currentCampusAlertMessage}</p>
+                  </MotionDiv>
                 ) : (
-                  <p className="mt-3 text-lg text-slate-500">
+                  <p className="mt-4 rounded-2xl border border-dashed border-emerald-200 bg-white/80 px-4 py-3 text-lg text-slate-500">
                     No active campus alerts right now.
                   </p>
+                )}
+
+                {campusAlerts.length > 1 && (
+                  <div className="mt-4 flex items-center gap-2">
+                    {campusAlerts.map((_, index) => (
+                      <span
+                        key={`alert-dot-${index}`}
+                        className={`campus-alert-dot ${index === currentAlertIndex ? 'is-active' : ''}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {currentCampusAlertMessage && (
+                  <div className="campus-alert-progress mt-4">
+                    <span key={`progress-${currentAlertIndex}`} className="campus-alert-progress-bar" />
+                  </div>
                 )}
               </MotionDiv>
             </div>
