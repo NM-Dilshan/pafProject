@@ -11,6 +11,7 @@ import {
   ClipboardList,
   Home,
   LogOut,
+  MapPin,
   Menu,
   MessageSquareWarning,
   Search,
@@ -111,7 +112,7 @@ function Sidebar() {
   )
 }
 
-function Navbar({ user, onLogout, isNotificationOpen, setIsNotificationOpen }) {
+function Navbar({ user, onLogout, isNotificationOpen, setIsNotificationOpen, isLocationEnabled, onToggleLocation }) {
   return (
     <header className="sticky top-0 z-30 border-b border-green-100 bg-white/90 backdrop-blur-md">
       <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
@@ -131,6 +132,19 @@ function Navbar({ user, onLogout, isNotificationOpen, setIsNotificationOpen }) {
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-3">
+          <button
+            onClick={onToggleLocation}
+            className={`hidden items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold shadow-sm sm:inline-flex ${
+              isLocationEnabled
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-slate-200 bg-slate-50 text-slate-600'
+            }`}
+            aria-label={`Turn location ${isLocationEnabled ? 'off' : 'on'}`}
+          >
+            <MapPin className="h-4 w-4" />
+            {isLocationEnabled ? 'Location On' : 'Location Off'}
+          </button>
+
           <button className="hidden items-center gap-2 rounded-2xl border border-green-100 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm sm:flex">
             <Search className="h-4 w-4 text-green-600" />
             Search
@@ -215,13 +229,22 @@ function QuickActionButton({ title, description, icon, accent = 'bg-green-600', 
 
 const UserDashboardPage = () => {
   const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const [showLocationPopup, setShowLocationPopup] = useState(false)
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
+  const [showLocationPopup, setShowLocationPopup] = useState(() => {
+    const showPromptOnNextDashboardVisit = sessionStorage.getItem('showLocationPrompt') === 'true'
+    const isLocationSupported = typeof navigator !== 'undefined' && Boolean(navigator.geolocation)
+    const locationPreference = localStorage.getItem('studyAreaLocationPreference')
+    const shouldShowPopup = showPromptOnNextDashboardVisit && isLocationSupported && locationPreference !== 'enabled'
+
+    sessionStorage.removeItem('showLocationPrompt')
+
+    return shouldShowPopup
+  })
 
   const enableLocation = () => {
+    localStorage.setItem('studyAreaLocationPreference', 'enabled')
     setShowLocationPopup(false)
   }
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-green-50 text-slate-900">
@@ -260,6 +283,8 @@ const UserDashboardPage = () => {
             onLogout={logout}
             isNotificationOpen={isNotificationOpen}
             setIsNotificationOpen={setIsNotificationOpen}
+            isLocationEnabled={isLocationEnabled}
+            onToggleLocation={toggleLocation}
           />
 
           <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
