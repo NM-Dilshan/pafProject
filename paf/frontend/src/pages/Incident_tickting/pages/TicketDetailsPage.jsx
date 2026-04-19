@@ -103,9 +103,19 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
 
   if (!ticket) {
     return (
-      <div className="text-center py-12">
-        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <p className="text-gray-700 text-lg">{error || 'Ticket not found'}</p>
+      <div className="space-y-6">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Tickets
+        </button>
+
+        <div className="rounded-3xl border border-green-100 bg-white p-12 shadow-sm text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-700 text-lg">{error || 'Ticket not found'}</p>
+        </div>
       </div>
     )
   }
@@ -114,91 +124,89 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium"
-        >
-          <ChevronLeft className="h-5 w-5" />
-          Back
-        </button>
-      </div>
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back to Tickets
+      </button>
 
       {/* Alerts */}
       {successMessage && <SuccessAlert message={successMessage} />}
       {error && <ErrorAlert message={error} />}
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left Column - Ticket Details */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Header Card */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-start justify-between mb-4">
+        <div className="space-y-6 lg:col-span-2">
+          {/* Ticket Header Card */}
+          <div className="rounded-3xl border border-green-100 bg-white p-8 shadow-sm">
+            <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-900">{ticket.title}</h1>
-                <p className="text-gray-500 text-sm mt-1">Ticket ID: {ticket.id}</p>
+                <h1 className="text-2xl font-bold text-green-900">{ticket.title}</h1>
+                <p className="mt-2 text-sm text-slate-600">Ticket ID: {ticket.id}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <StatusBadge status={ticket.status} size="lg" />
                 <PriorityBadge priority={ticket.priority} size="lg" />
               </div>
             </div>
 
-            <div className="border-t pt-4">
-              <p className="text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
+            <div className="border-t border-green-100 pt-6">
+              <p className="whitespace-pre-wrap text-slate-700">{ticket.description}</p>
             </div>
           </div>
 
           {/* Details Card */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Details</h2>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-3xl border border-green-100 bg-white p-8 shadow-sm">
+            <h2 className="mb-6 text-lg font-bold text-green-900">Details</h2>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <p className="text-sm text-gray-600">Category</p>
-                <p className="text-sm font-medium text-gray-900">{ticket.category}</p>
+                <p className="text-sm font-semibold text-slate-600">Category</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{ticket.category}</p>
               </div>
               {ticket.resourceId && (
                 <div>
-                  <p className="text-sm text-gray-600">Resource ID</p>
-                  <p className="text-sm font-medium text-gray-900">{ticket.resourceId}</p>
+                  <p className="text-sm font-semibold text-slate-600">Resource ID</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">{ticket.resourceId}</p>
                 </div>
               )}
               {ticket.location && (
                 <div>
-                  <p className="text-sm text-gray-600">Location</p>
-                  <p className="text-sm font-medium text-gray-900">{ticket.location}</p>
+                  <p className="text-sm font-semibold text-slate-600">Location</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">{ticket.location}</p>
                 </div>
               )}
               <div>
-                <p className="text-sm text-gray-600">Preferred Contact</p>
-                <p className="text-sm font-medium text-gray-900">{ticket.preferredContact}</p>
+                <p className="text-sm font-semibold text-slate-600">Preferred Contact</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{ticket.preferredContact}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Reported By</p>
-                <p className="text-sm font-medium text-gray-900">{ticket.reportedByName}</p>
+                <p className="text-sm font-semibold text-slate-600">Reported By</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{ticket.reportedByName}</p>
               </div>
               {ticket.assignedTo && (
                 <div>
-                  <p className="text-sm text-gray-600">Assigned To</p>
-                  <p className="text-sm font-medium text-gray-900">{ticket.assignedToName}</p>
+                  <p className="text-sm font-semibold text-slate-600">Assigned To</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">{ticket.assignedToName}</p>
                 </div>
               )}
               <div>
-                <p className="text-sm text-gray-600">Created</p>
-                <p className="text-sm font-medium text-gray-900">{formatDateTime(ticket.createdAt)}</p>
+                <p className="text-sm font-semibold text-slate-600">Created</p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{formatDateTime(ticket.createdAt)}</p>
               </div>
               {ticket.resolutionNotes && (
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-600">Resolution Notes</p>
-                  <p className="text-sm font-medium text-gray-900 whitespace-pre-wrap">{ticket.resolutionNotes}</p>
+                <div className="col-span-full">
+                  <p className="text-sm font-semibold text-slate-600">Resolution Notes</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-slate-900">{ticket.resolutionNotes}</p>
                 </div>
               )}
               {ticket.rejectionReason && (
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-600">Rejection Reason</p>
-                  <p className="text-sm font-medium text-gray-900 whitespace-pre-wrap">{ticket.rejectionReason}</p>
+                <div className="col-span-full">
+                  <p className="text-sm font-semibold text-slate-600">Rejection Reason</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-slate-900">{ticket.rejectionReason}</p>
                 </div>
               )}
             </div>
@@ -206,14 +214,15 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
 
           {/* Attachments */}
           {ticket.attachmentUrls && ticket.attachmentUrls.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="rounded-3xl border border-green-100 bg-white p-8 shadow-sm">
+              <h3 className="mb-6 text-lg font-bold text-green-900">Attachments</h3>
               <AttachmentPreviewList attachmentUrls={ticket.attachmentUrls} />
             </div>
           )}
 
           {/* Comments */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Comments</h2>
+          <div className="rounded-3xl border border-green-100 bg-white p-8 shadow-sm">
+            <h2 className="mb-6 text-lg font-bold text-green-900">Comments</h2>
             <CommentThread
               ticketId={ticketId}
               comments={ticket.comments || []}
@@ -224,16 +233,16 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
           </div>
         </div>
 
-        {/* Right Column - Actions */}
+        {/* Right Column - Actions Sidebar */}
         {(isAdmin || isTechnician) && (
           <div className="space-y-6">
             {/* SLA Status Card */}
             {ticket.slaDeadline && (
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">SLA Status</h3>
-                <div className="space-y-4">
+              <div className="rounded-3xl border border-green-100 bg-white p-8 shadow-sm">
+                <h3 className="mb-6 text-lg font-bold text-green-900">SLA Status</h3>
+                <div className="space-y-6">
                   <div>
-                    <p className="text-sm text-gray-600 mb-2">Escalation Level</p>
+                    <p className="mb-3 text-sm font-semibold text-slate-600">Escalation Level</p>
                     <SLABadge
                       slaDeadline={ticket.slaDeadline}
                       escalationLevel={ticket.escalationLevel}
@@ -243,15 +252,15 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
                     />
                   </div>
 
-                  <div className="border-t pt-4">
-                    <p className="text-sm text-gray-600">SLA Deadline</p>
-                    <p className="text-sm font-medium text-gray-900">
+                  <div className="border-t border-green-100 pt-6">
+                    <p className="text-sm font-semibold text-slate-600">SLA Deadline</p>
+                    <p className="mt-1 text-sm font-medium text-slate-900">
                       {formatDateTime(ticket.slaDeadline)}
                     </p>
                   </div>
 
                   {ticket.isOverdue && (
-                    <div className="bg-red-50 border border-red-200 rounded p-3">
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
                       <p className="text-sm text-red-800">
                         <span className="font-semibold">⚠️ This ticket is overdue</span>
                       </p>
@@ -259,9 +268,9 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
                   )}
 
                   {ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? (
-                    <div className="border-t pt-4">
-                      <p className="text-sm text-gray-600">Resolved Within SLA</p>
-                      <p className={`text-sm font-medium ${ticket.resolvedWithinSla ? 'text-green-700' : 'text-red-700'}`}>
+                    <div className="border-t border-green-100 pt-6">
+                      <p className="text-sm font-semibold text-slate-600">Resolved Within SLA</p>
+                      <p className={`mt-1 text-sm font-bold ${ticket.resolvedWithinSla ? 'text-green-700' : 'text-red-700'}`}>
                         {ticket.resolvedWithinSla ? '✓ Yes' : '✗ No'}
                       </p>
                     </div>
@@ -271,20 +280,20 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
             )}
 
             {/* Admin Actions Card */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 sticky top-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{isAdmin ? 'Admin' : 'Technician'} Actions</h3>
+            <div className="sticky top-6 rounded-3xl border border-green-100 bg-white p-8 shadow-sm">
+              <h3 className="mb-6 text-lg font-bold text-green-900">{isAdmin ? 'Admin' : 'Technician'} Actions</h3>
 
               {showStatusForm ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">
                       Change Status
                     </label>
                     <select
                       value={newStatus}
                       onChange={(e) => setNewStatus(e.target.value)}
                       disabled={isUpdatingStatus}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                     >
                       <option value={ticket.status}>{ticket.status}</option>
                       {validTransitions.map((status) => (
@@ -297,7 +306,7 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
 
                   {newStatus === 'RESOLVED' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
                         Resolution Notes
                       </label>
                       <textarea
@@ -305,14 +314,14 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
                         onChange={(e) => setNotes(e.target.value)}
                         disabled={isUpdatingStatus}
                         rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                       />
                     </div>
                   )}
 
                   {isAdmin && newStatus === 'REJECTED' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
                         Rejection Reason
                       </label>
                       <textarea
@@ -320,7 +329,7 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
                         onChange={(e) => setNotes(e.target.value)}
                         disabled={isUpdatingStatus}
                         rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
                       />
                     </div>
                   )}
@@ -329,7 +338,7 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
                     <button
                       onClick={handleStatusChange}
                       disabled={isUpdatingStatus || newStatus === ticket.status}
-                      className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-green-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-green-200 transition hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Check className="h-4 w-4" />
                       Update
@@ -341,7 +350,7 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
                         setNotes('')
                       }}
                       disabled={isUpdatingStatus}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      className="flex-1 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                     >
                       Cancel
                     </button>
@@ -352,12 +361,12 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
                   <button
                     onClick={() => setShowStatusForm(true)}
                     disabled={validTransitions.length === 0}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    className="w-full rounded-2xl bg-green-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-green-200 transition hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Change Status
                   </button>
                   {validTransitions.length === 0 && (
-                    <p className="text-xs text-gray-500 mt-2 text-center">
+                    <p className="mt-3 text-center text-xs text-slate-500">
                       No transitions available for this status
                     </p>
                   )}

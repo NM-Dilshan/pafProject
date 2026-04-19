@@ -9,22 +9,22 @@ export const TicketCard = ({ ticket, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer border border-gray-200 p-5"
+      className="group rounded-3xl border border-green-100 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-green-200 cursor-pointer"
     >
-      <div className="flex items-start justify-between mb-3">
+      <div className="mb-4 flex items-start justify-between">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
+          <h3 className="mb-1 line-clamp-2 text-lg font-bold text-green-900 group-hover:text-green-700 transition">
             {ticket.title}
           </h3>
-          <p className="text-sm text-gray-600 line-clamp-2">
+          <p className="line-clamp-2 text-sm text-slate-600">
             {ticket.description}
           </p>
         </div>
-        <ChevronRight className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" />
+        <ChevronRight className="ml-2 h-5 w-5 flex-shrink-0 text-slate-400 transition group-hover:text-slate-600 group-hover:translate-x-0.5" />
       </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-gray-100">
-        <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-green-100 pt-4">
+        <div className="flex flex-wrap gap-2">
           <StatusBadge status={ticket.status} size="sm" />
           <PriorityBadge priority={ticket.priority} size="sm" />
           {ticket.escalationLevel && (
@@ -38,11 +38,11 @@ export const TicketCard = ({ ticket, onClick }) => {
           )}
         </div>
 
-        <div className="flex items-center gap-4 text-xs text-gray-600">
+        <div className="flex items-center gap-4 text-xs text-slate-600">
           <span>#{ticket.id.substring(0, 8)}</span>
           <span>{createdDate}</span>
           {ticket.comments && ticket.comments.length > 0 && (
-            <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded">
+            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-green-800 font-semibold">
               {ticket.comments.length} comments
             </span>
           )}
