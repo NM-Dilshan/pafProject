@@ -754,7 +754,53 @@ const AdminResourcesPage = () => {
   };
 
   const useCurrentLocation = () => {
-    showToast('success', 'Location popup shown', 'Use map click or manual latitude/longitude entry. Browser location popup is disabled on this page.');
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      showToast('error', 'Location unavailable', 'This browser does not support geolocation. Use map click or manual latitude/longitude entry.');
+      return;
+    }
+
+    setLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = Number(position.coords.latitude.toFixed(6));
+        const longitude = Number(position.coords.longitude.toFixed(6));
+
+        setResourceForm((prev) => ({
+          ...prev,
+          latitude,
+          longitude,
+        }));
+
+        setResourceErrors((prev) => ({
+          ...prev,
+          latitude: undefined,
+          longitude: undefined,
+        }));
+
+        setLocating(false);
+        showToast('success', 'Location detected', 'Latitude and longitude were filled using your current location.');
+      },
+      (geoError) => {
+        let message = 'Unable to detect your location. Use map click or manual latitude/longitude entry.';
+
+        if (geoError?.code === 1) {
+          message = 'Location permission denied. Allow browser location access and try again.';
+        } else if (geoError?.code === 2) {
+          message = 'Location position unavailable. Please try again in a moment.';
+        } else if (geoError?.code === 3) {
+          message = 'Location request timed out. Please try again.';
+        }
+
+        setLocating(false);
+        showToast('error', 'Location failed', message);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000,
+      },
+    );
   };
 
   const handleDeleteBuilding = async () => {
