@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import ticketApiService from '../services/ticketApiService'
 import TicketCard from '../components/TicketCard'
@@ -6,18 +6,14 @@ import TicketTable from '../components/TicketTable'
 import { ErrorAlert } from '../components/ErrorAlert'
 import LoadingSpinner from '../components/LoadingSpinner'
 
-export const TicketListPage = ({ isAdmin, isTechnician, currentUserId, onCreateNew, onViewTicket, refreshTrigger }) => {
+export const TicketListPage = ({ isAdmin, isTechnician, onCreateNew, onViewTicket, refreshTrigger }) => {
   const [tickets, setTickets] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [viewMode, setViewMode] = useState('grid')
 
-  useEffect(() => {
-    fetchTickets()
-  }, [refreshTrigger])
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
@@ -37,7 +33,21 @@ export const TicketListPage = ({ isAdmin, isTechnician, currentUserId, onCreateN
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [isAdmin, isTechnician])
+
+  useEffect(() => {
+    fetchTickets()
+  }, [fetchTickets, refreshTrigger])
+
+  useEffect(() => {
+    const handleNotificationsUpdated = () => {
+      fetchTickets()
+    }
+
+    window.addEventListener('smartcampus-notifications-updated', handleNotificationsUpdated)
+
+    return () => window.removeEventListener('smartcampus-notifications-updated', handleNotificationsUpdated)
+  }, [fetchTickets])
 
   const filteredTickets = filterStatus === 'ALL'
     ? tickets

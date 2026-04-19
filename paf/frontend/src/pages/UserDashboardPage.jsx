@@ -237,6 +237,71 @@ const UserDashboardPage = () => {
   }, [user?.id, user?._id])
 
   useEffect(() => {
+    const handleNotificationsUpdated = () => {
+      const userId = user?.id || user?._id
+      if (!userId) {
+        return
+      }
+
+      bookingService.getUserBookings(userId)
+        .then((bookings) => {
+          const safeBookings = Array.isArray(bookings)
+            ? bookings
+            : Array.isArray(bookings?.data)
+              ? bookings.data
+              : []
+
+          return ticketApiService.getMyTickets().then((tickets) => {
+            const safeTickets = Array.isArray(tickets)
+              ? tickets
+              : Array.isArray(tickets?.data)
+                ? tickets.data
+                : []
+
+            const today = new Date()
+            const isSameDay = (dateValue) => {
+              if (!dateValue) {
+                return false
+              }
+
+              const date = new Date(dateValue)
+              if (Number.isNaN(date.getTime())) {
+                return false
+              }
+
+              return (
+                date.getFullYear() === today.getFullYear() &&
+                date.getMonth() === today.getMonth() &&
+                date.getDate() === today.getDate()
+              )
+            }
+
+            const activeBookingsCount = safeBookings.filter(
+              (booking) => booking.status === 'PENDING' || booking.status === 'APPROVED'
+            ).length
+            const newTicketsCount = safeTickets.filter((ticket) => isSameDay(ticket.createdAt)).length
+
+            setStats({
+              totalBookings: safeBookings.length,
+              pendingRequests: safeBookings.filter((booking) => booking.status === 'PENDING').length,
+              openTickets: safeTickets.filter((ticket) => ticket.status === 'OPEN').length,
+              approvedBookings: safeBookings.filter((booking) => booking.status === 'APPROVED').length,
+              activeBookings: activeBookingsCount,
+              newTickets: newTicketsCount,
+            })
+          })
+        })
+        .catch((error) => {
+          console.error('Failed to refresh dashboard stats after notification:', error)
+        })
+    }
+
+    window.addEventListener('smartcampus-notifications-updated', handleNotificationsUpdated)
+
+    return () => window.removeEventListener('smartcampus-notifications-updated', handleNotificationsUpdated)
+  }, [user?.id, user?._id])
+
+  useEffect(() => {
     const loadCampusAlerts = async () => {
       try {
         const data = await getActiveCampusAlerts()

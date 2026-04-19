@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -16,6 +16,11 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getAllTechnicians } from '../services/adminService';
+import bookingService from '../services/bookingService';
+import ticketApiService from './Incident_tickting/services/ticketApiService';
+import NotificationBell from '../components/NotificationBell'
+import NotificationDropdown from '../components/NotificationDropdown'
 
 const sidebarItems = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard', active: true },
@@ -24,35 +29,56 @@ const sidebarItems = [
   { label: 'Manage Technicians', icon: Wrench, to: '/admin/technicians' },
   { label: 'Manage Bookings', icon: CalendarCheck2, to: '/admin/bookings' },
   { label: 'Manage Tickets', icon: Ticket, to: '/admin/tickets' },
-  { label: 'Profile', icon: UserRound, to: '/profile' },
+
 ];
 
-const stats = [
-  { label: 'Total Users', value: '2,846', icon: Users },
-  { label: 'Active Technicians', value: '48', icon: UserRoundCog },
-  { label: 'Pending Tickets', value: '21', icon: Ticket },
-  { label: 'Total Bookings', value: '1,324', icon: CalendarCheck2 },
-];
+const getStatusLabel = (status) => {
+  const normalized = String(status || '').toUpperCase();
 
-const recentBookings = [
-  { id: 'BK-1092', resource: 'Computer Lab A', date: 'Apr 17, 2026', requester: 'Nadeesha', status: 'Approved' },
-  { id: 'BK-1091', resource: 'Main Auditorium', date: 'Apr 17, 2026', requester: 'Harini', status: 'Pending' },
-  { id: 'BK-1088', resource: 'Meeting Room 2', date: 'Apr 16, 2026', requester: 'Sahan', status: 'Rejected' },
-  { id: 'BK-1085', resource: 'Smart Classroom 4', date: 'Apr 16, 2026', requester: 'Nipun', status: 'Approved' },
-];
+  if (normalized === 'APPROVED' || normalized === 'RESOLVED') return 'Approved';
+  if (normalized === 'REJECTED') return 'Rejected';
+  if (normalized === 'CLOSED') return 'Closed';
+  return 'Pending';
+};
 
-const recentTickets = [
-  { id: 'TK-622', issue: 'Projector failure in Hall B', category: 'IT Support', time: '15 min ago', status: 'Pending' },
-  { id: 'TK-619', issue: 'Air conditioning maintenance', category: 'Facilities', time: '45 min ago', status: 'Approved' },
-  { id: 'TK-613', issue: 'Access card validation issue', category: 'Security', time: '2 hours ago', status: 'Rejected' },
-  { id: 'TK-610', issue: 'Network speed degradation', category: 'ICT', time: 'Yesterday', status: 'Approved' },
-];
+const formatDisplayDate = (dateValue) => {
+  if (!dateValue) return 'Unknown date';
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return 'Unknown date';
+
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const formatRelativeTime = (dateValue) => {
+  if (!dateValue) return 'Recently';
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return 'Recently';
+
+  const diffMs = Date.now() - parsed.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+
+  return formatDisplayDate(dateValue);
+};
 
 function StatusBadge({ status }) {
   const statusStyles = {
     Approved: 'bg-green-100 text-green-800 ring-green-200',
     Pending: 'bg-yellow-100 text-yellow-800 ring-yellow-200',
     Rejected: 'bg-red-100 text-red-800 ring-red-200',
+    Closed: 'bg-slate-100 text-slate-700 ring-slate-200',
   };
 
   return (
@@ -113,7 +139,7 @@ function Sidebar({ onLogout }) {
   );
 }
 
-function TopNavbar({ onLogout, user }) {
+function TopNavbar({ onLogout, user, isNotificationOpen, setIsNotificationOpen }) {
   return (
     <header className="sticky top-0 z-20 border-b border-green-100 bg-white/90 backdrop-blur">
       <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
@@ -128,10 +154,13 @@ function TopNavbar({ onLogout, user }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-green-100 text-green-800">
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
+          <div className="relative">
+            <NotificationBell onBellClick={() => setIsNotificationOpen((value) => !value)} />
+            <NotificationDropdown
+              isOpen={isNotificationOpen}
+              onClose={() => setIsNotificationOpen(false)}
+            />
+          </div>
 
           <div className="hidden items-center gap-2 rounded-xl border border-green-100 bg-white px-3 py-2 sm:flex">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
@@ -170,11 +199,20 @@ function StatCard({ icon, label, value }) {
   );
 }
 
+function LoadingCard() {
+  return (
+    <div className="rounded-2xl border border-green-100 bg-white p-5 shadow-sm">
+      <div className="h-4 w-24 animate-pulse rounded bg-green-100" />
+      <div className="mt-3 h-8 w-16 animate-pulse rounded bg-green-100" />
+    </div>
+  );
+}
+
 function ActionButton({ icon, label, to }) {
   return (
     <Link
       to={to}
-      className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-3 text-sm font-semibold text-green-800 transition hover:-translate-y-0.5 hover:bg-green-50"
+      className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-gradient-to-br from-white to-green-50 px-4 py-3 text-sm font-semibold text-green-800 shadow-sm transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md"
     >
       {React.createElement(icon, { className: 'h-4 w-4' })}
       {label}
@@ -182,7 +220,7 @@ function ActionButton({ icon, label, to }) {
   );
 }
 
-function BookingsTable() {
+function BookingsTable({ bookings, loading }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-green-100 bg-white">
       <table className="min-w-full divide-y divide-green-100 text-left text-sm">
@@ -196,40 +234,64 @@ function BookingsTable() {
           </tr>
         </thead>
         <tbody className="divide-y divide-green-50 bg-white">
-          {recentBookings.map((booking) => (
-            <tr key={booking.id}>
-              <td className="px-4 py-3 font-semibold text-slate-700">{booking.id}</td>
-              <td className="px-4 py-3 text-slate-600">{booking.resource}</td>
-              <td className="px-4 py-3 text-slate-600">{booking.date}</td>
-              <td className="px-4 py-3 text-slate-600">{booking.requester}</td>
-              <td className="px-4 py-3">
-                <StatusBadge status={booking.status} />
+          {loading ? (
+            <tr>
+              <td className="px-4 py-6 text-center text-slate-500" colSpan="5">
+                Loading bookings...
               </td>
             </tr>
-          ))}
+          ) : bookings.length > 0 ? (
+            bookings.map((booking) => (
+              <tr key={booking.id}>
+                <td className="px-4 py-3 font-semibold text-slate-700">{booking.id || booking.bookingId || 'Unknown'}</td>
+                <td className="px-4 py-3 text-slate-600">{booking.resource?.hallName || booking.resourceName || 'Unknown Resource'}</td>
+                <td className="px-4 py-3 text-slate-600">{formatDisplayDate(booking.date || booking.createdAt)}</td>
+                <td className="px-4 py-3 text-slate-600">{booking.user?.name || booking.userName || 'Unknown User'}</td>
+                <td className="px-4 py-3">
+                  <StatusBadge status={getStatusLabel(booking.status)} />
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td className="px-4 py-6 text-center text-slate-500" colSpan="5">
+                No bookings found
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
   );
 }
 
-function TicketsList() {
+function TicketsList({ tickets, loading }) {
   return (
     <div className="space-y-3">
-      {recentTickets.map((ticket) => (
-        <div key={ticket.id} className="rounded-2xl border border-green-100 bg-white p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-semibold text-slate-900">{ticket.issue}</p>
-              <p className="mt-1 text-sm text-slate-600">{ticket.category}</p>
-            </div>
-            <StatusBadge status={ticket.status} />
-          </div>
-          <p className="mt-2 text-xs text-slate-500">
-            {ticket.id} • {ticket.time}
-          </p>
+      {loading ? (
+        <div className="rounded-2xl border border-green-100 bg-white p-4 text-sm text-slate-500 shadow-sm">
+          Loading tickets...
         </div>
-      ))}
+      ) : tickets.length > 0 ? (
+        tickets.map((ticket) => (
+          <div key={ticket.id} className="rounded-2xl border border-green-100 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-slate-900">{ticket.title || ticket.issue || 'Untitled ticket'}</p>
+                <p className="mt-1 text-sm text-slate-600">{ticket.category || 'Uncategorized'}</p>
+              </div>
+              <StatusBadge status={getStatusLabel(ticket.status)} />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              {ticket.id || 'Unknown'} • {formatRelativeTime(ticket.createdAt)}
+            </p>
+          </div>
+        ))
+      ) : (
+        <div className="rounded-2xl border border-green-100 bg-white p-4 text-sm text-slate-500 shadow-sm">
+          No tickets found
+        </div>
+      )}
     </div>
   );
 }
@@ -267,11 +329,93 @@ function OverviewPanel() {
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalTechnicians: 0,
+    pendingApprovals: 0,
+    pendingTickets: 0,
+    totalBookings: 0,
+  });
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [recentTickets, setRecentTickets] = useState([]);
 
   const handleLogout = () => {
     logout();
     navigate('/staff/login', { replace: true });
   };
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const [techniciansResult, bookingsResult, ticketsResult] = await Promise.allSettled([
+          getAllTechnicians(),
+          bookingService.getAllBookings(),
+          ticketApiService.getAllTickets(),
+        ]);
+
+        const safeTechnicians = techniciansResult.status === 'fulfilled' && Array.isArray(techniciansResult.value)
+          ? techniciansResult.value
+          : [];
+        const safeBookings = bookingsResult.status === 'fulfilled' && Array.isArray(bookingsResult.value)
+          ? bookingsResult.value
+          : [];
+        const safeTickets = ticketsResult.status === 'fulfilled' && Array.isArray(ticketsResult.value)
+          ? ticketsResult.value
+          : [];
+
+        const failures = [techniciansResult, bookingsResult, ticketsResult]
+          .filter((result) => result.status === 'rejected')
+          .map((result) => result.reason?.response?.data?.message || result.reason?.message || 'Request failed');
+
+        const sortedBookings = [...safeBookings].sort((a, b) => {
+          const aTime = new Date(a.createdAt || a.date || 0).getTime();
+          const bTime = new Date(b.createdAt || b.date || 0).getTime();
+          return bTime - aTime;
+        });
+
+        const sortedTickets = [...safeTickets].sort((a, b) => {
+          const aTime = new Date(a.createdAt || 0).getTime();
+          const bTime = new Date(b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+
+        setDashboardStats({
+          totalTechnicians: safeTechnicians.length,
+          pendingApprovals: safeBookings.filter((booking) => String(booking.status || '').toUpperCase() === 'PENDING').length,
+          pendingTickets: safeTickets.filter((ticket) => {
+            const status = String(ticket.status || '').toUpperCase();
+            return status === 'OPEN' || status === 'PENDING';
+          }).length,
+          totalBookings: safeBookings.length,
+        });
+
+        setRecentBookings(sortedBookings.slice(0, 4));
+        setRecentTickets(sortedTickets.slice(0, 4));
+
+        if (failures.length > 0) {
+          setError(failures.join(' | '));
+        }
+      } catch (fetchError) {
+        setError(fetchError.response?.data?.message || fetchError.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, []);
+
+  const stats = [
+    { label: 'Total Technicians', value: String(dashboardStats.totalTechnicians), icon: Users },
+    { label: 'Pending Approvals', value: String(dashboardStats.pendingApprovals), icon: BookOpenCheck },
+    { label: 'Pending Tickets', value: String(dashboardStats.pendingTickets), icon: Ticket },
+    { label: 'Total Bookings', value: String(dashboardStats.totalBookings), icon: CalendarCheck2 },
+  ];
 
   return (
     <div className="min-h-screen bg-green-50 text-slate-900">
@@ -279,7 +423,12 @@ const AdminDashboardPage = () => {
         <Sidebar onLogout={handleLogout} />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopNavbar onLogout={handleLogout} user={user} />
+          <TopNavbar
+            onLogout={handleLogout}
+            user={user}
+            isNotificationOpen={isNotificationOpen}
+            setIsNotificationOpen={setIsNotificationOpen}
+          />
 
           <main className="flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8">
             <section className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
@@ -290,17 +439,23 @@ const AdminDashboardPage = () => {
             </section>
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {stats.map((item) => (
-                <StatCard key={item.label} {...item} />
-              ))}
+              {loading
+                ? Array.from({ length: 4 }).map((_, index) => <LoadingCard key={index} />)
+                : stats.map((item) => <StatCard key={item.label} {...item} />)}
             </section>
+
+            {error && (
+              <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                {error}
+              </section>
+            )}
 
             <section className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-bold text-slate-900">Quick Actions</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <ActionButton icon={UserRoundCog} label="Add Technician" to="/admin/technicians" />
-                <ActionButton icon={Ticket} label="View Tickets" to="/admin/tickets" />
-                <ActionButton icon={BookOpenCheck} label="View Bookings" to="/admin/bookings" />
+                <ActionButton icon={UserRoundCog} label="Manage Technicians" to="/admin/technicians" />
+                <ActionButton icon={Ticket} label="Manage Tickets" to="/admin/tickets" />
+                <ActionButton icon={BookOpenCheck} label="Manage Bookings" to="/admin/bookings" />
               </div>
             </section>
 
@@ -313,7 +468,7 @@ const AdminDashboardPage = () => {
                       View all
                     </Link>
                   </div>
-                  <BookingsTable />
+                  <BookingsTable bookings={recentBookings} loading={loading} />
                 </div>
 
                 <div>
@@ -323,7 +478,7 @@ const AdminDashboardPage = () => {
                       Open queue
                     </Link>
                   </div>
-                  <TicketsList />
+                  <TicketsList tickets={recentTickets} loading={loading} />
                 </div>
               </div>
 
