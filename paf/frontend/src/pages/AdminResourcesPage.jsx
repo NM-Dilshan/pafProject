@@ -44,7 +44,6 @@ const sidebarItems = [
   { label: 'Manage Technicians', icon: Wrench, to: '/admin/technicians' },
   { label: 'Manage Bookings', icon: CalendarCheck2, to: '/admin/bookings' },
   { label: 'Manage Tickets', icon: Ticket, to: '/admin/tickets' },
-  { label: 'Profile', icon: UserRound, to: '/profile' },
 ];
 
 const RESOURCE_TYPES = [
