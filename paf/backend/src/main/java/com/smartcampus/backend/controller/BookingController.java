@@ -289,7 +289,7 @@ public class BookingController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BookingResponse> cancelBooking(
             @PathVariable String id,
-            @RequestParam String reason,
+            @RequestParam(required = false, defaultValue = "") String reason,
             Authentication authentication) {
         String userId = authentication.getName();
         BookingResponse response = bookingService.cancelBooking(id, userId, reason);
