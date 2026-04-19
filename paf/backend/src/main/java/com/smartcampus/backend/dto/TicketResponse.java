@@ -2,6 +2,7 @@ package com.smartcampus.backend.dto;
 
 import com.smartcampus.backend.model.TicketStatus;
 import com.smartcampus.backend.model.TicketPriority;
+import com.smartcampus.backend.model.EscalationLevel;
 import com.smartcampus.backend.model.TicketComment;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -33,4 +34,10 @@ public class TicketResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime resolvedAt;
+    
+    // SLA-related fields for Member 3 novelty feature
+    private LocalDateTime slaDeadline;
+    private EscalationLevel escalationLevel;
+    private Boolean isOverdue;
+    private Boolean resolvedWithinSla;
 }

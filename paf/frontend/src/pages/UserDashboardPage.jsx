@@ -21,9 +21,8 @@ import {
 const navigationItems = [
   { label: 'Dashboard', icon: Home, href: '#dashboard' },
   { label: 'Study Areas', icon: BookOpen, to: '/study-areas' },
-  { label: 'Bookings', icon: CalendarCheck2, href: '#bookings' },
-  { label: 'My Bookings', icon: ClipboardList, href: '#my-bookings' },
-  { label: 'Tickets', icon: MessageSquareWarning, href: '/incident-ticketing' },
+  { label: 'Bookings', icon: CalendarCheck2, to: '/bookings' },
+  { label: 'Tickets', icon: MessageSquareWarning, to: '/incident-ticketing' },
   { label: 'Notifications', icon: Bell, href: '#notifications' },
   { label: 'Profile', icon: UserRound, href: '#profile' },
 ]
@@ -229,6 +228,20 @@ function QuickActionButton({ title, description, icon, accent = 'bg-green-600', 
 
 const UserDashboardPage = () => {
   const { user, logout } = useAuth()
+  const [activeSection, setActiveSection] = useState('dashboard')
+  
+  // Listen to hash changes
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1) || 'dashboard'
+      setActiveSection(hash)
+    }
+    
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+  
   const [showLocationPopup, setShowLocationPopup] = useState(() => {
     const showPromptOnNextDashboardVisit = sessionStorage.getItem('showLocationPrompt') === 'true'
     const isLocationSupported = typeof navigator !== 'undefined' && Boolean(navigator.geolocation)
@@ -244,6 +257,21 @@ const UserDashboardPage = () => {
     localStorage.setItem('studyAreaLocationPreference', 'enabled')
     setShowLocationPopup(false)
   }
+  
+  const [isLocationEnabled, setIsLocationEnabled] = useState(() => {
+    return localStorage.getItem('studyAreaLocationPreference') === 'enabled'
+  })
+  
+  const toggleLocation = () => {
+    const newState = !isLocationEnabled
+    if (newState) {
+      localStorage.setItem('studyAreaLocationPreference', 'enabled')
+    } else {
+      localStorage.removeItem('studyAreaLocationPreference')
+    }
+    setIsLocationEnabled(newState)
+  }
+  
   const [isNotificationOpen, setIsNotificationOpen] = useState(false)
 
   return (
@@ -346,53 +374,91 @@ const UserDashboardPage = () => {
             </section>
 
             <section className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-              <div className="rounded-[2rem] border border-green-100 bg-white p-6 shadow-sm" id="dashboard">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-xl font-extrabold text-green-900">Quick Actions</h3>
-                    <p className="mt-1 text-sm text-slate-500">Fast access to common campus workflows.</p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-3" id="resources">
-                  <QuickActionButton
-                    title="Book a Resource"
-                    description="Reserve rooms, labs, or equipment in seconds."
-                    icon={CalendarCheck2}
-                    accent="bg-green-600"
-                    to="/study-areas"
-                  />
-                  <QuickActionButton
-                    title="Report an Issue"
-                    description="Log facility or IT issues for quick follow-up."
-                    icon={CircleAlert}
-                    accent="bg-cyan-500"
-                    to="/incident-ticketing"
-                  />
-                  <QuickActionButton
-                    title="View Notifications"
-                    description="Check approvals, updates, and reminders."
-                    icon={Bell}
-                    accent="bg-green-800"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-6" id="notifications">
-                <div className="rounded-[2rem] border border-green-100 bg-white p-6 shadow-sm">
-                  <h4 className="text-lg font-bold text-green-900">Notifications</h4>
-                  <div className="mt-4 space-y-3">
-                    <div className="rounded-2xl bg-green-50 p-4">
-                      <p className="text-sm font-semibold text-green-900">Booking approved</p>
-                      <p className="mt-1 text-xs text-slate-600">Your Computer Lab A booking was approved.</p>
-                    </div>
-                    <div className="rounded-2xl bg-yellow-50 p-4">
-                      <p className="text-sm font-semibold text-yellow-900">Pending review</p>
-                      <p className="mt-1 text-xs text-slate-600">Meeting Room 2 request is waiting for staff approval.</p>
+              {(activeSection === 'dashboard' || activeSection === 'resources') && (
+                <div className="rounded-[2rem] border border-green-100 bg-white p-6 shadow-sm" id="dashboard">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-extrabold text-green-900">Quick Actions</h3>
+                      <p className="mt-1 text-sm text-slate-500">Fast access to common campus workflows.</p>
                     </div>
                   </div>
+
+                  <div className="mt-5 grid gap-4 md:grid-cols-3" id="resources">
+                    <QuickActionButton
+                      title="Book a Resource"
+                      description="Reserve rooms, labs, or equipment in seconds."
+                      icon={CalendarCheck2}
+                      accent="bg-green-600"
+                      to="/study-areas"
+                    />
+                    <QuickActionButton
+                      title="Report an Issue"
+                      description="Log facility or IT issues for quick follow-up."
+                      icon={CircleAlert}
+                      accent="bg-cyan-500"
+                      to="/incident-ticketing"
+                    />
+                    <QuickActionButton
+                      title="View Notifications"
+                      description="Check approvals, updates, and reminders."
+                      icon={Bell}
+                      accent="bg-green-800"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {(activeSection === 'bookings' || activeSection === 'my-bookings') && (
+                <div className="rounded-[2rem] border border-green-100 bg-white p-6 shadow-sm" id="bookings">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-extrabold text-green-900">{activeSection === 'my-bookings' ? 'My Bookings' : 'Available Resources'}</h3>
+                      <p className="mt-1 text-sm text-slate-500">View and manage your reservations.</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 overflow-hidden rounded-3xl border border-green-100">
+                    <table className="min-w-full divide-y divide-green-100 text-left text-sm">
+                      <thead className="bg-green-50/80">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold text-green-900">Resource</th>
+                          <th className="px-4 py-3 font-semibold text-green-900">Date</th>
+                          <th className="px-4 py-3 font-semibold text-green-900">Time</th>
+                          <th className="px-4 py-3 font-semibold text-green-900">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-green-100 bg-white">
+                        {recentBookings.map((booking, idx) => (
+                          <tr key={idx} className="hover:bg-green-50/50">
+                            <td className="px-4 py-4 font-medium text-green-900">{booking.resource}</td>
+                            <td className="px-4 py-4 text-slate-600">{booking.date}</td>
+                            <td className="px-4 py-4 text-slate-600">{booking.time}</td>
+                            <td className="px-4 py-4"><StatusBadge status={booking.status} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {activeSection === 'notifications' && (
+                <div className="space-y-6" id="notifications">
+                  <div className="rounded-[2rem] border border-green-100 bg-white p-6 shadow-sm">
+                    <h4 className="text-lg font-bold text-green-900">Notifications</h4>
+                    <div className="mt-4 space-y-3">
+                      <div className="rounded-2xl bg-green-50 p-4">
+                        <p className="text-sm font-semibold text-green-900">Booking approved</p>
+                        <p className="mt-1 text-xs text-slate-600">Your Computer Lab A booking was approved.</p>
+                      </div>
+                      <div className="rounded-2xl bg-yellow-50 p-4">
+                        <p className="text-sm font-semibold text-yellow-900">Pending review</p>
+                        <p className="mt-1 text-xs text-slate-600">Meeting Room 2 request is waiting for staff approval.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
           </main>
         </div>

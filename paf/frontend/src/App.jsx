@@ -20,6 +20,7 @@ import StaffLoginPage from './pages/StaffLoginPage';
 import TechnicianDashboardPage from './pages/TechnicianDashboardPage';
 import TechnicianTicketsPage from './pages/TechnicianTicketsPage';
 import UserDashboardPage from './pages/UserDashboardPage';
+import UserBookingsPage from './pages/UserBookingsPage';
 import { IncidentTicketingPage } from './pages/Incident_tickting';
 import './App.css';
 import StudyAreasPage from './facilities/pages/StudyAreasPage';
@@ -47,6 +48,7 @@ function App() {
 
           <Route element={<UserRoute />}>
             <Route path="/dashboard" element={<UserDashboardPage />} />
+            <Route path="/bookings" element={<UserBookingsPage />} />
             <Route path="/study-areas" element={<StudyAreasPage />} />
           </Route>
 

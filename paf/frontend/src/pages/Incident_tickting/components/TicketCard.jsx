@@ -1,5 +1,6 @@
 import React from 'react'
 import { StatusBadge, PriorityBadge } from './StatusBadge'
+import SLABadge from './SLABadge'
 import { ChevronRight } from 'lucide-react'
 
 export const TicketCard = ({ ticket, onClick }) => {
@@ -23,9 +24,18 @@ export const TicketCard = ({ ticket, onClick }) => {
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-3 pt-3 border-t border-gray-100">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <StatusBadge status={ticket.status} size="sm" />
           <PriorityBadge priority={ticket.priority} size="sm" />
+          {ticket.escalationLevel && (
+            <SLABadge 
+              slaDeadline={ticket.slaDeadline}
+              escalationLevel={ticket.escalationLevel}
+              isOverdue={ticket.isOverdue}
+              size="sm"
+              showTime={true}
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-4 text-xs text-gray-600">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { ChevronLeft, AlertCircle, Check } from 'lucide-react'
 import ticketApiService from '../services/ticketApiService'
 import { StatusBadge, PriorityBadge } from '../components/StatusBadge'
+import SLABadge from '../components/SLABadge'
 import AttachmentPreviewList from '../components/AttachmentPreviewList'
 import CommentThread from '../components/CommentThread'
 import { ErrorAlert, SuccessAlert } from '../components/ErrorAlert'
@@ -225,7 +226,51 @@ export const TicketDetailsPage = ({ ticketId, isAdmin, isTechnician, currentUser
 
         {/* Right Column - Actions */}
         {(isAdmin || isTechnician) && (
-          <div>
+          <div className="space-y-6">
+            {/* SLA Status Card */}
+            {ticket.slaDeadline && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">SLA Status</h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Escalation Level</p>
+                    <SLABadge
+                      slaDeadline={ticket.slaDeadline}
+                      escalationLevel={ticket.escalationLevel}
+                      isOverdue={ticket.isOverdue}
+                      size="md"
+                      showTime={true}
+                    />
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <p className="text-sm text-gray-600">SLA Deadline</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {formatDateTime(ticket.slaDeadline)}
+                    </p>
+                  </div>
+
+                  {ticket.isOverdue && (
+                    <div className="bg-red-50 border border-red-200 rounded p-3">
+                      <p className="text-sm text-red-800">
+                        <span className="font-semibold">⚠️ This ticket is overdue</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? (
+                    <div className="border-t pt-4">
+                      <p className="text-sm text-gray-600">Resolved Within SLA</p>
+                      <p className={`text-sm font-medium ${ticket.resolvedWithinSla ? 'text-green-700' : 'text-red-700'}`}>
+                        {ticket.resolvedWithinSla ? '✓ Yes' : '✗ No'}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
+
+            {/* Admin Actions Card */}
             <div className="bg-white border border-gray-200 rounded-lg p-6 sticky top-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{isAdmin ? 'Admin' : 'Technician'} Actions</h3>
 

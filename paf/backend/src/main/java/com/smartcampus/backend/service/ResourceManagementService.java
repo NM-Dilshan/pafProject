@@ -74,7 +74,7 @@ public class ResourceManagementService {
                 .filter(resource -> normalizedSearch == null || normalizedSearch.isBlank()
                         || (resource.getHallName() != null
                                 && resource.getHallName().toLowerCase().contains(normalizedSearch)))
-                .sorted(Comparator.comparing(Resource::getHallName, String.CASE_INSENSITIVE_ORDER))
+                .sorted(Comparator.nullsLast(Comparator.comparing(Resource::getHallName, String.CASE_INSENSITIVE_ORDER)))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
