@@ -24,6 +24,7 @@ import { IncidentTicketingPage } from './pages/Incident_tickting';
 import './App.css';
 import StudyAreasPage from './facilities/pages/StudyAreasPage';
 
+
 function Unauthorized() {
   return <Navigate to="/login" replace />;
 }
