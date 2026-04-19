@@ -5,7 +5,6 @@ import {
   Bell,
   Building2,
   CalendarCheck2,
-  ClipboardList,
   Eye,
   LayoutDashboard,
   LogOut,
@@ -41,10 +40,10 @@ import {
 const sidebarItems = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard' },
   { label: 'Resources', icon: Building2, to: '/admin/resources', active: true },
+  { label: 'Campus Alerts', icon: Bell, to: '/admin/alerts' },
   { label: 'Manage Technicians', icon: Wrench, to: '/admin/technicians' },
   { label: 'Manage Bookings', icon: CalendarCheck2, to: '/admin/bookings' },
   { label: 'Manage Tickets', icon: Ticket, to: '/admin/tickets' },
-  { label: 'Reports', icon: ClipboardList, to: '/admin/reports' },
   { label: 'Profile', icon: UserRound, to: '/profile' },
 ];
 

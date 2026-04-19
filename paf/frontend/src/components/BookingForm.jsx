@@ -486,14 +486,14 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
   const selectedResource = resources.find((r) => r.id === formData.resourceId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[radial-gradient(1000px_600px_at_10%_-10%,#dcfce7_0%,#f8fafc_42%,#f0fdf4_100%)] py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
         {/* Form Container */}
-        <div className="rounded-xl bg-white shadow-lg">
+        <div className="rounded-3xl border border-green-100 bg-white shadow-sm">
           {/* Header Section */}
-          <div className="border-b border-gray-200 bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-8 text-center text-white sm:px-8">
+          <div className="border-b border-green-100 bg-gradient-to-r from-green-600 to-green-700 px-6 py-8 text-center text-white sm:px-8">
             <h2 className="text-3xl font-bold tracking-tight">Create New Booking</h2>
-            <p className="mt-2 text-sm text-blue-100">Book a resource for your event, class, or meeting</p>
+            <p className="mt-2 text-sm text-green-100">Book a resource for your event, class, or meeting</p>
           </div>
 
           <div className="px-6 py-8 sm:px-8">
@@ -599,10 +599,10 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   value={formData.resourceId}
                   onChange={handleChange}
                   disabled={loading}
-                  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
                     touched.resourceId && errors.resourceId
                       ? 'border-red-300 bg-red-50 text-gray-900'
-                      : 'border-gray-300 bg-white text-gray-900 hover:border-gray-400'
+                      : 'border-green-200 bg-white text-gray-900 hover:border-green-300'
                   } ${loading ? 'cursor-not-allowed opacity-60' : ''}`}
                 >
                   <option value="">-- Select a Resource --</option>
@@ -623,30 +623,30 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
 
                 {/* Resource Info Card */}
                 {selectedResource && (
-                  <div className="mt-4 rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+                  <div className="mt-4 rounded-lg border-2 border-green-200 bg-green-50 p-4">
                     <div className="grid gap-3">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Resource Details</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-green-600">Resource Details</p>
                           <p className="mt-1 text-lg font-bold text-gray-900">{selectedResource.hallName}</p>
                         </div>
-                        <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
                           {selectedResource.resourceType}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-3 border-t border-blue-200 pt-3">
+                      <div className="grid grid-cols-2 gap-3 border-t border-green-200 pt-3">
                         <div>
-                          <p className="text-xs text-blue-600">Capacity</p>
+                          <p className="text-xs text-green-600">Capacity</p>
                           <p className="text-sm font-bold text-gray-900">{selectedResource.capacity} people</p>
                         </div>
                         <div>
-                          <p className="text-xs text-blue-600">Location</p>
+                          <p className="text-xs text-green-600">Location</p>
                           <p className="text-sm font-bold text-gray-900">
                             {selectedResource.buildingName}, Block {selectedResource.blockName}
                           </p>
                         </div>
                         <div className="col-span-2">
-                          <p className="text-xs text-blue-600">Floor</p>
+                          <p className="text-xs text-green-600">Floor</p>
                           <p className="text-sm font-bold text-gray-900">Floor {selectedResource.floorNumber}</p>
                         </div>
                       </div>
@@ -667,10 +667,10 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   value={formData.date}
                   onChange={handleChange}
                   min={new Date().toISOString().split('T')[0]}
-                  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
                     touched.date && errors.date
                       ? 'border-red-300 bg-red-50 text-gray-900'
-                      : 'border-gray-300 bg-white text-gray-900'
+                      : 'border-green-200 bg-white text-gray-900'
                   }`}
                 />
                 {touched.date && errors.date && (
@@ -685,21 +685,21 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
 
               {/* Time Selection */}
               <div className="grid grid-cols-1 gap-6">
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="rounded-lg border border-green-100 bg-green-50/60 p-4">
                   <p className="text-sm font-semibold text-gray-900">Customize Slot Range</p>
                   <p className="mt-1 text-xs text-gray-600">
                     Choose a time window. Only available slots inside this range will be shown.
                   </p>
                   <div className="mt-3 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label htmlFor="fromTime" className="block text-xs font-semibold uppercase text-gray-600">
+                      <label htmlFor="fromTime" className="block text-xs font-semibold uppercase text-green-700">
                         From
                       </label>
                       <select
                         id="fromTime"
                         value={slotRange.fromTime}
                         onChange={(e) => setSlotRange((prev) => ({ ...prev, fromTime: e.target.value }))}
-                        className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none"
+                        className="mt-1 block w-full rounded-lg border-2 border-green-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 focus:border-green-500 focus:outline-none"
                       >
                         {Array.from({ length: 21 }, (_, index) => {
                           const totalMinutes = 8 * 60 + index * 30;
@@ -715,14 +715,14 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="toTime" className="block text-xs font-semibold uppercase text-gray-600">
+                      <label htmlFor="toTime" className="block text-xs font-semibold uppercase text-green-700">
                         To
                       </label>
                       <select
                         id="toTime"
                         value={slotRange.toTime}
                         onChange={(e) => setSlotRange((prev) => ({ ...prev, toTime: e.target.value }))}
-                        className="mt-1 block w-full rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none"
+                        className="mt-1 block w-full rounded-lg border-2 border-green-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 focus:border-green-500 focus:outline-none"
                       >
                         {Array.from({ length: 21 }, (_, index) => {
                           const totalMinutes = 8 * 60 + index * 30;
@@ -752,7 +752,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                     </div>
                   )}
 
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-green-700">
                     The first available slot in this range will be auto-selected.
                   </p>
                   {formData.resourceId && formData.date && availableSlots.length === 0 && (
@@ -827,10 +827,10 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   onChange={handleChange}
                   placeholder="e.g., Lecture Class, Team Meeting, Research Lab Session"
                   maxLength="100"
-                  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
                     touched.purpose && errors.purpose
                       ? 'border-red-300 bg-red-50 text-gray-900'
-                      : 'border-gray-300 bg-white text-gray-900'
+                      : 'border-green-200 bg-white text-gray-900'
                   }`}
                 />
                 <div className="mt-1 flex items-center justify-between">
@@ -859,10 +859,10 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   onChange={handleChange}
                   min="1"
                   max="1000"
-                  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
                     touched.attendees && (errors.attendees || errors.capacity)
                       ? 'border-red-300 bg-red-50 text-gray-900'
-                      : 'border-gray-300 bg-white text-gray-900'
+                      : 'border-green-200 bg-white text-gray-900'
                   }`}
                 />
                 {touched.attendees && (errors.attendees || errors.capacity) && (
@@ -902,7 +902,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   placeholder="E.g., Need projector setup, require accessibility features, dietary requirements..."
                   rows="3"
                   maxLength="500"
-                  className="mt-2 block w-full rounded-lg border-2 border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="mt-2 block w-full rounded-lg border-2 border-green-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                 />
                 <p className="mt-1 text-xs text-gray-500">{formData.notes.length}/500 characters</p>
               </div>
@@ -915,7 +915,7 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
                   className={`flex items-center justify-center rounded-lg px-6 py-3 font-semibold transition-all duration-200 ${
                     loading || !isFormValid
                       ? 'cursor-not-allowed bg-gray-400 text-white opacity-75'
-                      : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-md hover:shadow-lg'
+                      : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800 shadow-md hover:shadow-lg'
                   }`}
                   title={!isFormValid ? 'Please fix validation errors before submitting' : ''}
                 >
@@ -969,9 +969,9 @@ const BookingForm = ({ onBookingCreated, onCancel }) => {
             </form>
 
             {/* Info Section */}
-            <div className="mt-8 rounded-lg border border-blue-100 bg-blue-50 p-4">
-              <h3 className="text-sm font-semibold text-blue-900">📝 Booking Information</h3>
-              <ul className="mt-2 space-y-2 text-xs text-blue-800">
+            <div className="mt-8 rounded-lg border border-green-100 bg-green-50 p-4">
+              <h3 className="text-sm font-semibold text-green-900">📝 Booking Information</h3>
+              <ul className="mt-2 space-y-2 text-xs text-green-800">
                 <li>• Bookings are subject to admin approval</li>
                 <li>• Working hours: 08:00 AM to 06:00 PM</li>
                 <li>• Minimum booking duration: 30 minutes</li>

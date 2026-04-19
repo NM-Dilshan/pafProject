@@ -229,7 +229,7 @@ public class ResourceManagementService {
             return null;
         }
         try {
-            return ResourceType.valueOf(resourceType.trim().toUpperCase());
+            return ResourceType.fromValue(resourceType);
         } catch (IllegalArgumentException ex) {
             throw new ValidationException("Invalid resource type value");
         }
