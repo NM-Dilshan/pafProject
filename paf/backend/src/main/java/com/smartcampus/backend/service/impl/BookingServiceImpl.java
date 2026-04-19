@@ -149,19 +149,20 @@ public class BookingServiceImpl implements BookingService {
 
         // Iterate through the day and find free slots
         while (currentTime.isBefore(WORKING_HOURS_END) && availableSlots.size() < slotCount) {
-            LocalTime slotEnd = currentTime.plusMinutes(SLOT_DURATION_MINUTES);
+            final LocalTime slotStart = currentTime;
+            LocalTime slotEnd = slotStart.plusMinutes(SLOT_DURATION_MINUTES);
 
             // Check if this slot overlaps with any existing booking
             boolean isSlotFree = bookings.stream()
                     .noneMatch(booking ->
-                            currentTime.isBefore(booking.getEndTime()) &&
+                            slotStart.isBefore(booking.getEndTime()) &&
                             slotEnd.isAfter(booking.getStartTime()));
 
             if (isSlotFree) {
                 String description = String.format("Available from %s to %s",
-                        currentTime.toString(),
+                        slotStart.toString(),
                         slotEnd.toString());
-                availableSlots.add(new AvailableSlotResponse(currentTime, slotEnd, description));
+                availableSlots.add(new AvailableSlotResponse(slotStart, slotEnd, description));
             }
 
             currentTime = slotEnd;
