@@ -24,6 +24,7 @@ public class TicketResponse {
     private TicketStatus status;
     private String reportedBy;
     private String reportedByName;
+    private String reportedByEmail;
     private String assignedTo;
     private String assignedToName;
     private String preferredContact;

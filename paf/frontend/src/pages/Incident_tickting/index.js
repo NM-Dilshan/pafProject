@@ -23,9 +23,11 @@ export { default as CommentForm } from './components/CommentForm'
 export { default as EditCommentForm } from './components/EditCommentForm'
 export { ErrorAlert, SuccessAlert, InfoAlert } from './components/ErrorAlert'
 export { default as LoadingSpinner } from './components/LoadingSpinner'
+export { default as TicketAssistantWidget } from './components/TicketAssistantWidget'
 
 // Services
 export { default as ticketApiService } from './services/ticketApiService'
+export { default as ticketAssistantApi } from './services/ticketAssistantApi'
 
 // Utils
 export {

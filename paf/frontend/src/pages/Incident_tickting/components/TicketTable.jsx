@@ -9,7 +9,7 @@ export const TicketTable = ({ tickets = [], onTicketClick }) => {
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-              Ticket ID
+              Reported By Email
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
               Title
@@ -37,7 +37,7 @@ export const TicketTable = ({ tickets = [], onTicketClick }) => {
                 className="hover:bg-gray-50 transition cursor-pointer"
               >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {ticket.id.substring(0, 8)}
+                  {ticket.reportedByEmail || ticket.reportedByName || 'Unknown'}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                   {ticket.title}

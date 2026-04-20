@@ -31,16 +31,28 @@ export const VALIDATION_RULES = {
     category: {
       required: true,
       errorMessages: {
-        required: 'Category is required'
+        required: 'Category is required',
+        invalid: 'Please select a valid category'
       }
     },
-    resourceId: {
+    contactNumber: {
+      required: true,
+      minLength: 9,
+      maxLength: 20,
+      pattern: /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,4}[-\s.]?[0-9]{1,9}$/,
       errorMessages: {
-        invalid: 'Invalid resource ID'
+        required: 'Contact number is required',
+        minLength: 'Contact number must be at least 9 digits',
+        maxLength: 'Contact number cannot exceed 20 characters',
+        invalid: 'Please enter a valid phone number (e.g., 0712345678 or +94712345678 or 077-1234567)'
       }
     },
     location: {
+      required: true,
+      minLength: 3,
       errorMessages: {
+        required: 'Location is required',
+        minLength: 'Location must be at least 3 characters',
         invalid: 'Invalid location'
       }
     },
@@ -79,6 +91,120 @@ export const VALIDATION_RULES = {
   }
 }
 
+// Predefined ticket categories (must match frontend)
+export const TICKET_CATEGORIES = [
+  'IT Support',
+  'Facilities',
+  'Electrical',
+  'Network',
+  'Safety',
+  'Cleaning',
+  'Furniture',
+  'Air Conditioning',
+  'Projector / Equipment',
+  'Other'
+]
+
+export const validateField = (fieldName, value, formData, selectedResource) => {
+  const rules = VALIDATION_RULES.TICKET
+  const fieldRules = rules[fieldName]
+  
+  if (!fieldRules) {
+    return null // No validation rules for this field
+  }
+
+  // Title validation
+  if (fieldName === 'title') {
+    if (!value || !value.trim()) {
+      return fieldRules.errorMessages.required
+    }
+    if (value.trim().length < fieldRules.minLength) {
+      return fieldRules.errorMessages.minLength
+    }
+    if (value.length > fieldRules.maxLength) {
+      return fieldRules.errorMessages.maxLength
+    }
+    return null
+  }
+
+  // Description validation
+  if (fieldName === 'description') {
+    if (!value || !value.trim()) {
+      return fieldRules.errorMessages.required
+    }
+    if (value.trim().length < fieldRules.minLength) {
+      return fieldRules.errorMessages.minLength
+    }
+    if (value.length > fieldRules.maxLength) {
+      return fieldRules.errorMessages.maxLength
+    }
+    return null
+  }
+
+  // Priority validation
+  if (fieldName === 'priority') {
+    if (!value) {
+      return fieldRules.errorMessages.required
+    }
+    if (!fieldRules.allowed.includes(value)) {
+      return fieldRules.errorMessages.invalid
+    }
+    return null
+  }
+
+  // Category validation
+  if (fieldName === 'category') {
+    if (!value || !value.trim()) {
+      return fieldRules.errorMessages.required
+    }
+    if (!TICKET_CATEGORIES.includes(value)) {
+      return fieldRules.errorMessages.invalid
+    }
+    return null
+  }
+
+  // Contact number validation
+  if (fieldName === 'contactNumber') {
+    if (!value || !value.trim()) {
+      return fieldRules.errorMessages.required
+    }
+    if (value.length < fieldRules.minLength) {
+      return fieldRules.errorMessages.minLength
+    }
+    if (value.length > fieldRules.maxLength) {
+      return fieldRules.errorMessages.maxLength
+    }
+    if (!fieldRules.pattern.test(value)) {
+      return fieldRules.errorMessages.invalid
+    }
+    return null
+  }
+
+  // Location validation
+  if (fieldName === 'location') {
+    if (!value || !value.trim()) {
+      return fieldRules.errorMessages.required
+    }
+    if (value.trim().length < fieldRules.minLength) {
+      return fieldRules.errorMessages.minLength
+    }
+    return null
+  }
+
+  // Preferred contact validation
+  if (fieldName === 'preferredContact') {
+    if (!value || !value.trim()) {
+      return rules.preferredContact.errorMessages.required
+    }
+    if (!rules.preferredContact.pattern.test(value)) {
+      return rules.preferredContact.errorMessages.invalid
+    }
+    return null
+  }
+
+  return null
+}
+
 export const validateTicketForm = (formData) => {
   const errors = {}
   const rules = VALIDATION_RULES.TICKET
@@ -108,15 +234,29 @@ export const validateTicketForm = (formData) => {
     errors.priority = rules.priority.errorMessages.invalid
   }
 
-  // Category validation
+  // Category validation - must be from predefined list
   if (!formData.category || !formData.category.trim()) {
     errors.category = rules.category.errorMessages.required
+  } else if (!TICKET_CATEGORIES.includes(formData.category)) {
+    errors.category = rules.category.errorMessages.invalid
   }
 
-  // Resource validation - either resourceId or location required
-  if ((!formData.resourceId || !formData.resourceId.trim()) && 
-      (!formData.location || !formData.location.trim())) {
-    errors.resource = 'Either Resource ID or Location must be provided'
+  // Contact number validation (required)
+  if (!formData.contactNumber || !formData.contactNumber.trim()) {
+    errors.contactNumber = rules.contactNumber.errorMessages.required
+  } else if (formData.contactNumber.length < rules.contactNumber.minLength) {
+    errors.contactNumber = rules.contactNumber.errorMessages.minLength
+  } else if (formData.contactNumber.length > rules.contactNumber.maxLength) {
+    errors.contactNumber = rules.contactNumber.errorMessages.maxLength
+  } else if (!rules.contactNumber.pattern.test(formData.contactNumber)) {
+    errors.contactNumber = rules.contactNumber.errorMessages.invalid
+  }
+
+  // Location validation (required, minimum 3 chars)
+  if (!formData.location || !formData.location.trim()) {
+    errors.location = rules.location.errorMessages.required
+  } else if (formData.location.length < rules.location.minLength) {
+    errors.location = rules.location.errorMessages.minLength
   }
 
   // Preferred contact validation
