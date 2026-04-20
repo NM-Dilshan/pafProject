@@ -226,7 +226,6 @@ function BookingsTable({ bookings, loading }) {
       <table className="min-w-full divide-y divide-green-100 text-left text-sm">
         <thead className="bg-green-50">
           <tr>
-            <th className="px-4 py-3 font-semibold text-slate-900">Booking ID</th>
             <th className="px-4 py-3 font-semibold text-slate-900">Resource</th>
             <th className="px-4 py-3 font-semibold text-slate-900">Date</th>
             <th className="px-4 py-3 font-semibold text-slate-900">Requester</th>
@@ -243,7 +242,6 @@ function BookingsTable({ bookings, loading }) {
           ) : bookings.length > 0 ? (
             bookings.map((booking) => (
               <tr key={booking.id}>
-                <td className="px-4 py-3 font-semibold text-slate-700">{booking.id || booking.bookingId || 'Unknown'}</td>
                 <td className="px-4 py-3 text-slate-600">{booking.resource?.hallName || booking.resourceName || 'Unknown Resource'}</td>
                 <td className="px-4 py-3 text-slate-600">{formatDisplayDate(booking.date || booking.createdAt)}</td>
                 <td className="px-4 py-3 text-slate-600">{booking.user?.name || booking.userName || 'Unknown User'}</td>
@@ -283,7 +281,7 @@ function TicketsList({ tickets, loading }) {
               <StatusBadge status={getStatusLabel(ticket.status)} />
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              {ticket.id || 'Unknown'} • {formatRelativeTime(ticket.createdAt)}
+              {formatRelativeTime(ticket.createdAt)}
             </p>
           </div>
         ))
